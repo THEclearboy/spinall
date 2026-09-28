@@ -27,11 +27,17 @@ npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 
 ## Déployer
 
-Le build est un fichier HTML autonome (`dist/index.html`, ~300 Ko, police incluse).
-Il est publié comme artifact Claude à l'adresse
-<https://claude.ai/artifact/F5uGStopTKN3Dy1yEKEx5b>, ouverte par le hub « Mes apps »
-en page directe. Pour mettre à jour : `npm run build`, puis republier `dist/index.html`
-sur cette même adresse (ou l'ouvrir directement depuis le disque).
+Le build est un fichier HTML autonome (`dist/index.html`, ~330 Ko, police incluse).
+
+- **GitHub Pages** (automatique) : chaque push sur `main` lance `.github/workflows/pages.yml`
+  (tests, build, déploiement). Adresse publique : <https://theclearboy.github.io/spinall/>.
+  C'est l'adresse à donner au hub « Mes apps » (page directe).
+- **Artifact Claude** : le même fichier est aussi publié sur
+  <https://claude.ai/artifact/F5uGStopTKN3Dy1yEKEx5b> (privé, nécessite d'être connecté).
+- **En local** : ouvrir `dist/index.html` directement dans un navigateur.
+
+Les données (mains importées, historique, réglages) sont stockées par le navigateur **par
+adresse** : en changeant d'adresse, exporter depuis Réglages puis importer sur la nouvelle.
 
 ## Organisation du code
 
