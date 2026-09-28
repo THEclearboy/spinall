@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TableScene } from "./TableScene.jsx";
 import { GrilleMains, Legende } from "./Grille.jsx";
+import { Bento, Tuile } from "./ui/Tuile.jsx";
+import { Anneau } from "./graphes/Anneaux.jsx";
 import { texteCarte } from "../lib/cartes.js";
 import { actionAttendue, labelAction } from "../lib/charts.js";
 import { tirerQuestion, majPoids } from "../lib/entrainement.js";
@@ -113,23 +115,41 @@ export function Entrainement({ charts, reglages, setReglages, poids, setPoids, s
 
   return (
     <section className="entrainement">
-      <div className="bandeau-score">
-        <span>
-          Série : <strong>{serie}</strong> 🔥 (record {record})
-        </span>
-        <span>
-          Session : <strong>{session.bonnes}</strong> / {session.total}
-        </span>
-        {question.issueDeRevision && <span className="etiquette-revision">Révision</span>}
-        <label className="interrupteur">
-          <input
-            type="checkbox"
-            checked={reglages.erreursUniquement}
-            onChange={(e) => setReglages((r) => ({ ...r, erreursUniquement: e.target.checked }))}
-          />
-          Erreurs uniquement
-        </label>
-      </div>
+      <Bento>
+        <Tuile variante="lime" span={3} titre="Série" sous={`record ${record}`} classe="tuile-score">
+          <div className="tuile-grand">
+            {serie} <span className="petit">🔥</span>
+          </div>
+        </Tuile>
+        <Tuile variante="blanc" span={3} titre="Session" sous="bonnes réponses" classe="tuile-score">
+          <div className="tuile-grand">
+            {session.bonnes}
+            <span className="petit">/ {session.total}</span>
+          </div>
+        </Tuile>
+        <Tuile variante="lavande" span={3} titre="Précision" sous="sur cette session" classe="tuile-score">
+          <div className="anneau-bloc">
+            <Anneau
+              valeur={session.total ? session.bonnes / session.total : 0}
+              couleur="#46468c"
+              taille={110}
+              epaisseur={11}
+              centre={session.total ? `${Math.round((100 * session.bonnes) / session.total)}%` : "—"}
+            />
+          </div>
+        </Tuile>
+        <Tuile variante="sombre" span={3} titre="Mode" sous={question.issueDeRevision ? "main issue de tes erreurs" : "tirage aléatoire"} classe="tuile-score">
+          <label className="interrupteur">
+            <input
+              type="checkbox"
+              checked={reglages.erreursUniquement}
+              onChange={(e) => setReglages((r) => ({ ...r, erreursUniquement: e.target.checked }))}
+            />
+            Erreurs uniquement
+          </label>
+          {question.issueDeRevision && <span className="etiquette-revision">Révision</span>}
+        </Tuile>
+      </Bento>
       <div className={montrerTableau ? "zone-jeu avec-tableau" : "zone-jeu"}>
         <TableScene
           famille={famille.id}

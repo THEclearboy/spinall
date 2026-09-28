@@ -37,7 +37,6 @@ export function Legende() {
   return (
     <div className="legende">
       <span className="pastille action-allin" /> All-in
-      <span className="pastille action-allin-violet" /> All-in (violet sur les captures)
       <span className="pastille action-call" /> Call / Limp / Check
       <span className="pastille action-raise" /> Raise
       <span className="pastille action-fold" /> Fold

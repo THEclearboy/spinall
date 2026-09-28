@@ -7,9 +7,28 @@ import { tapisAvantRiver, jetonsAttendus } from "../../lib/analyse.js";
 // Cache des résultats par main (le calcul d'équité est coûteux).
 const cacheParMain = new Map();
 
+/** Cumule réel / EV sur une liste de mains déjà calculées (triées par date). */
+export function cumulerEv(mains, parMain) {
+  const triees = [...mains].sort((a, b) => (a.date || 0) - (b.date || 0));
+  let cumulReel = 0;
+  let cumulEv = 0;
+  let nbAjustees = 0;
+  const points = [];
+  for (const main of triees) {
+    const r = parMain.get(main.id);
+    if (!r) continue;
+    cumulReel += r.reel;
+    cumulEv += r.ev;
+    if (r.ajustee) nbAjustees += 1;
+    points.push({ date: main.date, reel: cumulReel, ev: cumulEv });
+  }
+  return { points, avancement: 1, nbAjustees, sommeReel: cumulReel, sommeEv: cumulEv, parMain };
+}
+
 /**
- * Calcule, par lots de 50 mains pour ne pas bloquer l'interface, les jetons
- * réels et attendus cumulés. Retourne { points, avancement, nbAjustees, sommeReel, sommeEv }.
+ * Calcule, par lots de 50 mains pour ne pas bloquer l'interface, les jetons réels et
+ * attendus de chaque main. Retourne { points, avancement, nbAjustees, sommeReel, sommeEv,
+ * parMain } ; `points` et `parMain` valent null tant que le calcul n'est pas terminé.
  */
 export function useCalculEv(mains) {
   const [etat, setEtat] = useState({
@@ -18,12 +37,13 @@ export function useCalculEv(mains) {
     nbAjustees: 0,
     sommeReel: 0,
     sommeEv: 0,
+    parMain: null,
   });
 
   useEffect(() => {
     let annule = false;
     const triees = [...mains].sort((a, b) => (a.date || 0) - (b.date || 0));
-    const resultats = [];
+    const parMain = new Map();
     let index = 0;
 
     function lot() {
@@ -41,25 +61,13 @@ export function useCalculEv(mains) {
           };
           cacheParMain.set(main.id, calcule);
         }
-        resultats.push({ date: triees[index].date, ...calcule });
+        parMain.set(main.id, calcule);
       }
       if (index < triees.length) {
         setEtat((e) => ({ ...e, avancement: index / triees.length }));
         setTimeout(lot, 0);
       } else {
-        let cumulReel = 0;
-        let cumulEv = 0;
-        setEtat({
-          points: resultats.map((r) => ({
-            date: r.date,
-            reel: (cumulReel += r.reel),
-            ev: (cumulEv += r.ev),
-          })),
-          avancement: 1,
-          nbAjustees: resultats.filter((r) => r.ajustee).length,
-          sommeReel: cumulReel,
-          sommeEv: cumulEv,
-        });
+        setEtat(cumulerEv(triees, parMain));
       }
     }
 

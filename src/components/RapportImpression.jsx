@@ -1,4 +1,5 @@
 import { CartesKpi } from "./CartesKpi.jsx";
+import { BilanLimites } from "./BilanLimites.jsx";
 import { GrapheBankroll } from "./graphes/GrapheBankroll.jsx";
 import { GrapheParties } from "./graphes/GrapheParties.jsx";
 import { GrapheConformite } from "./graphes/GrapheConformite.jsx";
@@ -7,7 +8,7 @@ import { labelAction } from "../lib/charts.js";
 import { euros, dateHeure, ordinal, pluriel, formatBbArrondi } from "../lib/format.js";
 
 /** Version imprimable de l'analyse (visible uniquement via window.print, voir @media print). */
-export function RapportImpression({ analyse, stats, calculEv, conformite, cEV, reelParPartie }) {
+export function RapportImpression({ analyse, stats, calculEv, conformite, cEV, reelParPartie, limite = null, bilan = [] }) {
   const dates = analyse.mains.map((m) => m.date).filter(Boolean);
   const debut = dates.length ? Math.min(...dates) : null;
   const fin = dates.length ? Math.max(...dates) : null;
@@ -17,13 +18,19 @@ export function RapportImpression({ analyse, stats, calculEv, conformite, cEV, r
   return (
     <div className="rapport-impression" aria-hidden="true">
       <header className="rapport-entete">
-        <h1>Expresso Trainer — Rapport d'analyse</h1>
+        <h1>Expresso Trainer — Rapport d'analyse{limite !== null && ` — limite ${euros(limite)}`}</h1>
         <p className="muet">
           {pluriel("main", stats.nbMains)}, {pluriel("partie", stats.parties.length)}
           {debut && fin && ` — du ${jour(debut)} au ${jour(fin)}`} · généré le{" "}
           {new Date().toLocaleDateString("fr-FR")}
         </p>
       </header>
+      {bilan.length > 0 && (
+        <div className="panneau">
+          <h3>Résultats par limite</h3>
+          <BilanLimites lignes={bilan} selection={limite} onSelection={() => {}} />
+        </div>
+      )}
       <CartesKpi stats={stats} cEV={cEV} reelParPartie={reelParPartie} variante="rapport" />
       {stats.courbe.length >= 2 && (
         <div className="panneau">

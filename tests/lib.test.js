@@ -75,7 +75,7 @@ test("parseur Betclic : mains, blinds, joueurs, actions, résultat", () => {
   assert.deepEqual(premiere.blinds, [10, 20]);
   assert.equal(premiere.hero, "Hero");
   assert.equal(premiere.joueurs.length, 3);
-  assert.equal(premiere.buyIn, 5);
+  assert.equal(premiere.buyIn, 0.2);
   assert.equal(premiere.multiplicateur, 2);
   assert.ok(premiere.actions.some((a) => a.verbe === "raise" && a.allin));
   assert.equal(premiere.board.length, 5);
@@ -133,4 +133,56 @@ test("pluriel", () => {
   assert.equal(pluriel("main ajoutée", 1), "1 main ajoutée");
   assert.equal(pluriel("main ajoutée", 3), "3 mains ajoutées");
   assert.equal(pluriel("déjà connue", 2), "2 déjà connues");
+});
+
+test("heures jouées : sessions et corrections manuelles", async () => {
+  const { heuresParJour, sessions, cleJour, formatHeures } = await import("../src/lib/heures.js");
+  const { parseFichier } = await import("../src/lib/historique-mains.js");
+  const { mains } = parseFichier(historique);
+  const s = sessions(mains);
+  assert.ok(s.length >= 6, "au moins une session par partie");
+  const heures = heuresParJour(mains);
+  assert.ok(heures.size >= 6);
+  const cle = cleJour(mains[0].date);
+  assert.ok(heures.get(cle).heures > 0);
+  const corrige = heuresParJour(mains, { [cle]: 2.5 });
+  assert.equal(corrige.get(cle).heures, 2.5);
+  assert.equal(corrige.get(cle).manuel, 2.5);
+  assert.equal(formatHeures(1.5), "1 h 30");
+  assert.equal(formatHeures(0.25), "15 min");
+});
+
+test("bilan par limite : une ligne par buy-in plus le total", async () => {
+  const { bilanParLimite, limitesPresentes } = await import("../src/lib/limites.js");
+  const { parseFichier } = await import("../src/lib/historique-mains.js");
+  const { mains } = parseFichier(historique);
+  assert.deepEqual(limitesPresentes(mains), [0.2, 1]);
+  const bilan = bilanParLimite(mains, null);
+  assert.equal(bilan.length, 3);
+  assert.equal(bilan[2].limite, null);
+  assert.equal(bilan[0].parties + bilan[1].parties, bilan[2].parties);
+  assert.ok(Math.abs(bilan[0].netEuro + bilan[1].netEuro - bilan[2].netEuro) < 1e-9);
+  assert.equal(bilan[0].cEV, null, "cEV inconnu tant que l'EV n'est pas calculée");
+  const evParMain = new Map(mains.map((m) => [m.id, { reel: 10, ev: 5 }]));
+  const avecEv = bilanParLimite(mains, evParMain);
+  assert.ok(avecEv[2].cEV !== null);
+});
+
+test("situation : positions et cartes utilisées", async () => {
+  const { situationParDefaut, etiquettesPositions, cartesUtilisees, potTotal, rueCourante, encoderSituation, decoderSituation } =
+    await import("../src/lib/situation.js");
+  const s = situationParDefaut();
+  assert.deepEqual(etiquettesPositions(s), ["BTN", "SB", "BB"]);
+  s.dealer = 1;
+  assert.deepEqual(etiquettesPositions(s), ["BB", "BTN", "SB"]);
+  s.format = "HU";
+  assert.deepEqual(etiquettesPositions(s), ["BB", "BTN / SB"]);
+  s.sieges[0].cartes = ["Ah", "Kd"];
+  s.board = ["2c", "7d", "9s", null, null];
+  assert.deepEqual([...cartesUtilisees(s)].sort(), ["2c", "7d", "9s", "Ah", "Kd"]);
+  assert.equal(rueCourante(s), "Flop");
+  assert.equal(potTotal(s), 0.5);
+  const copie = decoderSituation(encoderSituation(s));
+  assert.deepEqual(copie.sieges[0].cartes, ["Ah", "Kd"]);
+  assert.throws(() => decoderSituation("{}"));
 });

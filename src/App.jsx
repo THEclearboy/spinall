@@ -7,6 +7,7 @@ import { Statistiques } from "./components/Statistiques.jsx";
 import { Analyse } from "./components/Analyse.jsx";
 import { Ranges } from "./components/Ranges.jsx";
 import { Reglages } from "./components/Reglages.jsx";
+import { Situation } from "./components/Situation.jsx";
 
 function reglagesParDefaut() {
   return {
@@ -21,6 +22,7 @@ const ONGLETS = [
   { id: "entrainement", nom: "Entraînement" },
   { id: "stats", nom: "Statistiques" },
   { id: "analyse", nom: "Analyse" },
+  { id: "situation", nom: "Situation" },
   { id: "ranges", nom: "Ranges" },
   { id: "reglages", nom: "Réglages" },
 ];
@@ -135,6 +137,7 @@ export default function App() {
             sauvegardeOk={sauvegardeOk}
           />
         )}
+        {onglet === "situation" && <Situation />}
         {onglet === "ranges" && (
           <Ranges donnees={donnees} charts={charts} overrides={overrides} setOverrides={setOverrides} />
         )}

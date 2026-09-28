@@ -4,8 +4,8 @@ Game ID: 500
 Game Mode: Spin
 Date & Time: 2026-09-01 20:00:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 10/20
 Total Pot: 0
@@ -37,8 +37,8 @@ Game ID: 500
 Game Mode: Spin
 Date & Time: 2026-09-01 20:00:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 15/30
 Total Pot: 0
@@ -68,8 +68,8 @@ Game ID: 500
 Game Mode: Spin
 Date & Time: 2026-09-01 20:00:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 20/40
 Total Pot: 0
@@ -94,8 +94,8 @@ Game ID: 500
 Game Mode: Spin
 Date & Time: 2026-09-01 20:00:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 25/50
 Total Pot: 0
@@ -122,7 +122,7 @@ Vilain2 shows [8c Jh] (Une combinaison)
 Hero shows [Js 6c] (Une combinaison)
 *** SUMMARY ***
 Vilain2 wins the pot of 1445
-Vilain2 finished 1st and wins 10.00 EUR
+Vilain2 finished 1st and wins 0.40 EUR
 Vilain1 finished 2nd
 Hero finished 3rd
 ----
@@ -132,8 +132,8 @@ Game ID: 501
 Game Mode: Spin
 Date & Time: 2026-09-02 20:07:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 10/20
 Total Pot: 0
@@ -163,8 +163,8 @@ Game ID: 501
 Game Mode: Spin
 Date & Time: 2026-09-02 20:07:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 15/30
 Total Pot: 0
@@ -192,8 +192,8 @@ Game ID: 501
 Game Mode: Spin
 Date & Time: 2026-09-02 20:07:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 20/40
 Total Pot: 0
@@ -216,8 +216,8 @@ Game ID: 501
 Game Mode: Spin
 Date & Time: 2026-09-02 20:07:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 25/50
 Total Pot: 0
@@ -242,7 +242,7 @@ Hero shows [As Ac] (Une combinaison)
 Vilain1 shows [4c 5c] (Une combinaison)
 *** SUMMARY ***
 Vilain1 wins the pot of 1000
-Vilain1 finished 1st and wins 10.00 EUR
+Vilain1 finished 1st and wins 2.00 EUR
 Hero finished 2nd
 ----
 *** HEADER ***
@@ -251,8 +251,8 @@ Game ID: 502
 Game Mode: Spin
 Date & Time: 2026-09-03 20:14:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 10/20
 Total Pot: 0
@@ -284,8 +284,8 @@ Game ID: 502
 Game Mode: Spin
 Date & Time: 2026-09-03 20:14:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 15/30
 Total Pot: 0
@@ -315,8 +315,8 @@ Game ID: 502
 Game Mode: Spin
 Date & Time: 2026-09-03 20:14:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 20/40
 Total Pot: 0
@@ -341,8 +341,8 @@ Game ID: 502
 Game Mode: Spin
 Date & Time: 2026-09-03 20:14:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 25/50
 Total Pot: 0
@@ -369,7 +369,7 @@ Vilain2 shows [2h Th] (Une combinaison)
 Hero shows [7c Td] (Une combinaison)
 *** SUMMARY ***
 Hero wins the pot of 1445
-Hero finished 1st and wins 10.00 EUR
+Hero finished 1st and wins 0.40 EUR
 Vilain1 finished 2nd
 Vilain2 finished 3rd
 ----
@@ -379,8 +379,8 @@ Game ID: 503
 Game Mode: Spin
 Date & Time: 2026-09-04 20:21:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 10/20
 Total Pot: 0
@@ -410,8 +410,8 @@ Game ID: 503
 Game Mode: Spin
 Date & Time: 2026-09-04 20:21:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 15/30
 Total Pot: 0
@@ -439,8 +439,8 @@ Game ID: 503
 Game Mode: Spin
 Date & Time: 2026-09-04 20:21:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 20/40
 Total Pot: 0
@@ -463,8 +463,8 @@ Game ID: 503
 Game Mode: Spin
 Date & Time: 2026-09-04 20:21:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 25/50
 Total Pot: 0
@@ -489,7 +489,7 @@ Hero shows [Qh 4d] (Une combinaison)
 Vilain1 shows [Tc 5d] (Une combinaison)
 *** SUMMARY ***
 Vilain1 wins the pot of 1000
-Vilain1 finished 1st and wins 10.00 EUR
+Vilain1 finished 1st and wins 2.00 EUR
 Hero finished 2nd
 ----
 *** HEADER ***
@@ -498,8 +498,8 @@ Game ID: 504
 Game Mode: Spin
 Date & Time: 2026-09-05 20:28:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 10/20
 Total Pot: 0
@@ -531,8 +531,8 @@ Game ID: 504
 Game Mode: Spin
 Date & Time: 2026-09-05 20:28:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 15/30
 Total Pot: 0
@@ -562,8 +562,8 @@ Game ID: 504
 Game Mode: Spin
 Date & Time: 2026-09-05 20:28:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 20/40
 Total Pot: 0
@@ -588,8 +588,8 @@ Game ID: 504
 Game Mode: Spin
 Date & Time: 2026-09-05 20:28:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 0.20 EUR
+Prize pool: 0.40 EUR
 Multiplier: x2
 Blinds: 25/50
 Total Pot: 0
@@ -616,7 +616,7 @@ Vilain2 shows [6s 2c] (Une combinaison)
 Hero shows [8h Tc] (Une combinaison)
 *** SUMMARY ***
 Hero wins the pot of 1445
-Hero finished 1st and wins 10.00 EUR
+Hero finished 1st and wins 0.40 EUR
 Vilain1 finished 2nd
 Vilain2 finished 3rd
 ----
@@ -626,8 +626,8 @@ Game ID: 505
 Game Mode: Spin
 Date & Time: 2026-09-06 20:35:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 10/20
 Total Pot: 0
@@ -657,8 +657,8 @@ Game ID: 505
 Game Mode: Spin
 Date & Time: 2026-09-06 20:35:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 15/30
 Total Pot: 0
@@ -686,8 +686,8 @@ Game ID: 505
 Game Mode: Spin
 Date & Time: 2026-09-06 20:35:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 20/40
 Total Pot: 0
@@ -710,8 +710,8 @@ Game ID: 505
 Game Mode: Spin
 Date & Time: 2026-09-06 20:35:00
 Game Name: Expresso 5€
-Buy In: 5 EUR
-Prize pool: 10 EUR
+Buy In: 1 EUR
+Prize pool: 2 EUR
 Multiplier: x2
 Blinds: 25/50
 Total Pot: 0
@@ -736,5 +736,5 @@ Hero shows [3d Td] (Une combinaison)
 Vilain1 shows [6s 5s] (Une combinaison)
 *** SUMMARY ***
 Hero wins the pot of 1000
-Hero finished 1st and wins 10.00 EUR
+Hero finished 1st and wins 2.00 EUR
 Vilain1 finished 2nd
