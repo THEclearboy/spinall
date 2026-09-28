@@ -1,0 +1,740 @@
+*** HEADER ***
+Hand ID: 1000
+Game ID: 500
+Game Mode: Spin
+Date & Time: 2026-09-01 20:00:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 10/20
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (500) [Hero BTN]
+Seat 2: Vilain1 (500) [SB]
+Seat 3: Vilain2 (500) [BB]
+*** HOLE CARDS ***
+Hero: [6c 2h]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 10
+20:00:01 - Vilain2: Posts BB 20
+20:00:05 - Hero: Raises to 500 and is all-in
+20:00:06 - Vilain2: Folds
+20:00:07 - Vilain1: Calls 490 and is all-in
+*** FLOP *** [Jh 3h 2d]
+*** TURN *** [Jh 3h 2d 8h]
+*** RIVER *** [Jh 3h 2d 8h Kc]
+*** SHOWDOWN ***
+Hero shows [6c 2h] (Une combinaison)
+Vilain1 shows [6h Qs] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1020
+----
+*** HEADER ***
+Hand ID: 1001
+Game ID: 500
+Game Mode: Spin
+Date & Time: 2026-09-01 20:00:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 15/30
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (1020) [Hero BB]
+Seat 2: Vilain1 (0) [BTN]
+Seat 3: Vilain2 (480) [SB]
+*** HOLE CARDS ***
+Hero: [8s 8h]
+*** PRE-FLOP ***
+20:00:01 - Vilain2: Posts SB 15
+20:00:01 - Hero: Posts BB 30
+20:00:05 - Vilain1: Calls 30
+20:00:06 - Vilain2: Calls 15
+20:00:07 - Hero: Checks
+*** FLOP *** [Ts 2c Ac]
+20:01:00 - Hero: Checks
+20:01:01 - Vilain1: Bets 30
+20:01:02 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 120
+----
+*** HEADER ***
+Hand ID: 1002
+Game ID: 500
+Game Mode: Spin
+Date & Time: 2026-09-01 20:00:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 20/40
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (990) [Hero SB]
+Seat 2: Vilain1 (60) [BB]
+Seat 3: Vilain2 (450) [BTN]
+*** HOLE CARDS ***
+Hero: [7h Jh]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 20
+20:00:01 - Vilain1: Posts BB 40
+20:00:05 - Vilain2: Folds
+20:00:06 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 60
+----
+*** HEADER ***
+Hand ID: 1003
+Game ID: 500
+Game Mode: Spin
+Date & Time: 2026-09-01 20:00:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 25/50
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (970) [Hero BTN]
+Seat 2: Vilain1 (80) [SB]
+Seat 3: Vilain2 (450) [BB]
+*** HOLE CARDS ***
+Hero: [Js 6c]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 25
+20:00:01 - Vilain2: Posts BB 50
+20:00:05 - Hero: Raises to 100
+20:00:06 - Vilain1: Folds
+20:00:07 - Vilain2: Calls 50
+*** FLOP *** [Qd 2h As]
+20:01:00 - Vilain2: Bets 350 and is all-in
+20:01:01 - Hero: Calls 870 and is all-in
+*** TURN *** [Qd 2h As Td]
+*** RIVER *** [Qd 2h As Td 2d]
+*** SHOWDOWN ***
+Vilain2 shows [8c Jh] (Une combinaison)
+Hero shows [Js 6c] (Une combinaison)
+*** SUMMARY ***
+Vilain2 wins the pot of 1445
+Vilain2 finished 1st and wins 10.00 EUR
+Vilain1 finished 2nd
+Hero finished 3rd
+----
+*** HEADER ***
+Hand ID: 1004
+Game ID: 501
+Game Mode: Spin
+Date & Time: 2026-09-02 20:07:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 10/20
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (500) [Hero SB BTN]
+Seat 2: Vilain1 (500) [BB]
+*** HOLE CARDS ***
+Hero: [Ac Qc]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 10
+20:00:01 - Vilain1: Posts BB 20
+20:00:05 - Hero: Raises to 500 and is all-in
+20:00:07 - Vilain1: Calls 480 and is all-in
+*** FLOP *** [7d 2d 8d]
+*** TURN *** [7d 2d 8d 3c]
+*** RIVER *** [7d 2d 8d 3c Ah]
+*** SHOWDOWN ***
+Hero shows [Ac Qc] (Une combinaison)
+Vilain1 shows [4h 2c] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1000
+----
+*** HEADER ***
+Hand ID: 1005
+Game ID: 501
+Game Mode: Spin
+Date & Time: 2026-09-02 20:07:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 15/30
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (1000) [Hero BB]
+Seat 2: Vilain1 (0) [SB BTN]
+*** HOLE CARDS ***
+Hero: [Js 6c]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 15
+20:00:01 - Hero: Posts BB 30
+20:00:05 - Vilain1: Calls 15
+20:00:07 - Hero: Checks
+*** FLOP *** [3h Kd 7d]
+20:01:00 - Hero: Checks
+20:01:01 - Vilain1: Bets 30
+20:01:02 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 90
+----
+*** HEADER ***
+Hand ID: 1006
+Game ID: 501
+Game Mode: Spin
+Date & Time: 2026-09-02 20:07:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 20/40
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (970) [Hero SB BTN]
+Seat 2: Vilain1 (30) [BB]
+*** HOLE CARDS ***
+Hero: [8c Ac]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 20
+20:00:01 - Vilain1: Posts BB 40
+20:00:05 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 60
+----
+*** HEADER ***
+Hand ID: 1007
+Game ID: 501
+Game Mode: Spin
+Date & Time: 2026-09-02 20:07:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 25/50
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (950) [Hero BB]
+Seat 2: Vilain1 (50) [SB BTN]
+*** HOLE CARDS ***
+Hero: [As Ac]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 25
+20:00:01 - Hero: Posts BB 50
+20:00:05 - Vilain1: Raises to 100
+20:00:07 - Hero: Calls 50
+*** FLOP *** [Jh 4h Qd]
+20:01:00 - Hero: Bets 850 and is all-in
+20:01:01 - Vilain1: Calls -50 and is all-in
+*** TURN *** [Jh 4h Qd 3c]
+*** RIVER *** [Jh 4h Qd 3c 6h]
+*** SHOWDOWN ***
+Hero shows [As Ac] (Une combinaison)
+Vilain1 shows [4c 5c] (Une combinaison)
+*** SUMMARY ***
+Vilain1 wins the pot of 1000
+Vilain1 finished 1st and wins 10.00 EUR
+Hero finished 2nd
+----
+*** HEADER ***
+Hand ID: 1008
+Game ID: 502
+Game Mode: Spin
+Date & Time: 2026-09-03 20:14:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 10/20
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (500) [Hero BTN]
+Seat 2: Vilain1 (500) [SB]
+Seat 3: Vilain2 (500) [BB]
+*** HOLE CARDS ***
+Hero: [6d 2c]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 10
+20:00:01 - Vilain2: Posts BB 20
+20:00:05 - Hero: Raises to 500 and is all-in
+20:00:06 - Vilain2: Folds
+20:00:07 - Vilain1: Calls 490 and is all-in
+*** FLOP *** [2s Js 4d]
+*** TURN *** [2s Js 4d Td]
+*** RIVER *** [2s Js 4d Td Kd]
+*** SHOWDOWN ***
+Hero shows [6d 2c] (Une combinaison)
+Vilain1 shows [8d 9s] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1020
+----
+*** HEADER ***
+Hand ID: 1009
+Game ID: 502
+Game Mode: Spin
+Date & Time: 2026-09-03 20:14:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 15/30
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (1020) [Hero BB]
+Seat 2: Vilain1 (0) [BTN]
+Seat 3: Vilain2 (480) [SB]
+*** HOLE CARDS ***
+Hero: [6c Jc]
+*** PRE-FLOP ***
+20:00:01 - Vilain2: Posts SB 15
+20:00:01 - Hero: Posts BB 30
+20:00:05 - Vilain1: Calls 30
+20:00:06 - Vilain2: Calls 15
+20:00:07 - Hero: Checks
+*** FLOP *** [9d Ks 9h]
+20:01:00 - Hero: Checks
+20:01:01 - Vilain1: Bets 30
+20:01:02 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 120
+----
+*** HEADER ***
+Hand ID: 1010
+Game ID: 502
+Game Mode: Spin
+Date & Time: 2026-09-03 20:14:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 20/40
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (990) [Hero SB]
+Seat 2: Vilain1 (60) [BB]
+Seat 3: Vilain2 (450) [BTN]
+*** HOLE CARDS ***
+Hero: [8h Kc]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 20
+20:00:01 - Vilain1: Posts BB 40
+20:00:05 - Vilain2: Folds
+20:00:06 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 60
+----
+*** HEADER ***
+Hand ID: 1011
+Game ID: 502
+Game Mode: Spin
+Date & Time: 2026-09-03 20:14:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 25/50
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (970) [Hero BTN]
+Seat 2: Vilain1 (80) [SB]
+Seat 3: Vilain2 (450) [BB]
+*** HOLE CARDS ***
+Hero: [7c Td]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 25
+20:00:01 - Vilain2: Posts BB 50
+20:00:05 - Hero: Raises to 100
+20:00:06 - Vilain1: Folds
+20:00:07 - Vilain2: Calls 50
+*** FLOP *** [3c Js 4s]
+20:01:00 - Vilain2: Bets 350 and is all-in
+20:01:01 - Hero: Calls 870 and is all-in
+*** TURN *** [3c Js 4s Qd]
+*** RIVER *** [3c Js 4s Qd Qs]
+*** SHOWDOWN ***
+Vilain2 shows [2h Th] (Une combinaison)
+Hero shows [7c Td] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1445
+Hero finished 1st and wins 10.00 EUR
+Vilain1 finished 2nd
+Vilain2 finished 3rd
+----
+*** HEADER ***
+Hand ID: 1012
+Game ID: 503
+Game Mode: Spin
+Date & Time: 2026-09-04 20:21:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 10/20
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (500) [Hero SB BTN]
+Seat 2: Vilain1 (500) [BB]
+*** HOLE CARDS ***
+Hero: [Jh 2s]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 10
+20:00:01 - Vilain1: Posts BB 20
+20:00:05 - Hero: Raises to 500 and is all-in
+20:00:07 - Vilain1: Calls 480 and is all-in
+*** FLOP *** [Kd 5h 8d]
+*** TURN *** [Kd 5h 8d Ks]
+*** RIVER *** [Kd 5h 8d Ks 8s]
+*** SHOWDOWN ***
+Hero shows [Jh 2s] (Une combinaison)
+Vilain1 shows [5s 4h] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1000
+----
+*** HEADER ***
+Hand ID: 1013
+Game ID: 503
+Game Mode: Spin
+Date & Time: 2026-09-04 20:21:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 15/30
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (1000) [Hero BB]
+Seat 2: Vilain1 (0) [SB BTN]
+*** HOLE CARDS ***
+Hero: [2d 3c]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 15
+20:00:01 - Hero: Posts BB 30
+20:00:05 - Vilain1: Calls 15
+20:00:07 - Hero: Checks
+*** FLOP *** [3h 5c 4d]
+20:01:00 - Hero: Checks
+20:01:01 - Vilain1: Bets 30
+20:01:02 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 90
+----
+*** HEADER ***
+Hand ID: 1014
+Game ID: 503
+Game Mode: Spin
+Date & Time: 2026-09-04 20:21:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 20/40
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (970) [Hero SB BTN]
+Seat 2: Vilain1 (30) [BB]
+*** HOLE CARDS ***
+Hero: [4c Qd]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 20
+20:00:01 - Vilain1: Posts BB 40
+20:00:05 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 60
+----
+*** HEADER ***
+Hand ID: 1015
+Game ID: 503
+Game Mode: Spin
+Date & Time: 2026-09-04 20:21:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 25/50
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (950) [Hero BB]
+Seat 2: Vilain1 (50) [SB BTN]
+*** HOLE CARDS ***
+Hero: [Qh 4d]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 25
+20:00:01 - Hero: Posts BB 50
+20:00:05 - Vilain1: Raises to 100
+20:00:07 - Hero: Calls 50
+*** FLOP *** [8c 5h 8s]
+20:01:00 - Hero: Bets 850 and is all-in
+20:01:01 - Vilain1: Calls -50 and is all-in
+*** TURN *** [8c 5h 8s 4c]
+*** RIVER *** [8c 5h 8s 4c Qd]
+*** SHOWDOWN ***
+Hero shows [Qh 4d] (Une combinaison)
+Vilain1 shows [Tc 5d] (Une combinaison)
+*** SUMMARY ***
+Vilain1 wins the pot of 1000
+Vilain1 finished 1st and wins 10.00 EUR
+Hero finished 2nd
+----
+*** HEADER ***
+Hand ID: 1016
+Game ID: 504
+Game Mode: Spin
+Date & Time: 2026-09-05 20:28:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 10/20
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (500) [Hero BTN]
+Seat 2: Vilain1 (500) [SB]
+Seat 3: Vilain2 (500) [BB]
+*** HOLE CARDS ***
+Hero: [5h 5s]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 10
+20:00:01 - Vilain2: Posts BB 20
+20:00:05 - Hero: Raises to 500 and is all-in
+20:00:06 - Vilain2: Folds
+20:00:07 - Vilain1: Calls 490 and is all-in
+*** FLOP *** [Qs 7s 2d]
+*** TURN *** [Qs 7s 2d 6d]
+*** RIVER *** [Qs 7s 2d 6d 9d]
+*** SHOWDOWN ***
+Hero shows [5h 5s] (Une combinaison)
+Vilain1 shows [8s Ac] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1020
+----
+*** HEADER ***
+Hand ID: 1017
+Game ID: 504
+Game Mode: Spin
+Date & Time: 2026-09-05 20:28:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 15/30
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (1020) [Hero BB]
+Seat 2: Vilain1 (0) [BTN]
+Seat 3: Vilain2 (480) [SB]
+*** HOLE CARDS ***
+Hero: [Tc Jc]
+*** PRE-FLOP ***
+20:00:01 - Vilain2: Posts SB 15
+20:00:01 - Hero: Posts BB 30
+20:00:05 - Vilain1: Calls 30
+20:00:06 - Vilain2: Calls 15
+20:00:07 - Hero: Checks
+*** FLOP *** [Qh Ac As]
+20:01:00 - Hero: Checks
+20:01:01 - Vilain1: Bets 30
+20:01:02 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 120
+----
+*** HEADER ***
+Hand ID: 1018
+Game ID: 504
+Game Mode: Spin
+Date & Time: 2026-09-05 20:28:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 20/40
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (990) [Hero SB]
+Seat 2: Vilain1 (60) [BB]
+Seat 3: Vilain2 (450) [BTN]
+*** HOLE CARDS ***
+Hero: [Kc Jd]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 20
+20:00:01 - Vilain1: Posts BB 40
+20:00:05 - Vilain2: Folds
+20:00:06 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 60
+----
+*** HEADER ***
+Hand ID: 1019
+Game ID: 504
+Game Mode: Spin
+Date & Time: 2026-09-05 20:28:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 25/50
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (970) [Hero BTN]
+Seat 2: Vilain1 (80) [SB]
+Seat 3: Vilain2 (450) [BB]
+*** HOLE CARDS ***
+Hero: [8h Tc]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 25
+20:00:01 - Vilain2: Posts BB 50
+20:00:05 - Hero: Raises to 100
+20:00:06 - Vilain1: Folds
+20:00:07 - Vilain2: Calls 50
+*** FLOP *** [2s Js Kd]
+20:01:00 - Vilain2: Bets 350 and is all-in
+20:01:01 - Hero: Calls 870 and is all-in
+*** TURN *** [2s Js Kd Ah]
+*** RIVER *** [2s Js Kd Ah 3h]
+*** SHOWDOWN ***
+Vilain2 shows [6s 2c] (Une combinaison)
+Hero shows [8h Tc] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1445
+Hero finished 1st and wins 10.00 EUR
+Vilain1 finished 2nd
+Vilain2 finished 3rd
+----
+*** HEADER ***
+Hand ID: 1020
+Game ID: 505
+Game Mode: Spin
+Date & Time: 2026-09-06 20:35:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 10/20
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (500) [Hero SB BTN]
+Seat 2: Vilain1 (500) [BB]
+*** HOLE CARDS ***
+Hero: [6d Js]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 10
+20:00:01 - Vilain1: Posts BB 20
+20:00:05 - Hero: Raises to 500 and is all-in
+20:00:07 - Vilain1: Calls 480 and is all-in
+*** FLOP *** [4c 5s Qc]
+*** TURN *** [4c 5s Qc 7d]
+*** RIVER *** [4c 5s Qc 7d Kh]
+*** SHOWDOWN ***
+Hero shows [6d Js] (Une combinaison)
+Vilain1 shows [7h Jc] (Une combinaison)
+*** SUMMARY ***
+Vilain1 wins the pot of 1000
+----
+*** HEADER ***
+Hand ID: 1021
+Game ID: 505
+Game Mode: Spin
+Date & Time: 2026-09-06 20:35:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 15/30
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (0) [Hero BB]
+Seat 2: Vilain1 (1000) [SB BTN]
+*** HOLE CARDS ***
+Hero: [9s Ac]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 15
+20:00:01 - Hero: Posts BB 30
+20:00:05 - Vilain1: Calls 15
+20:00:07 - Hero: Checks
+*** FLOP *** [Kc Td Jd]
+20:01:00 - Hero: Checks
+20:01:01 - Vilain1: Bets 30
+20:01:02 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 90
+----
+*** HEADER ***
+Hand ID: 1022
+Game ID: 505
+Game Mode: Spin
+Date & Time: 2026-09-06 20:35:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 20/40
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (-30) [Hero SB BTN]
+Seat 2: Vilain1 (1030) [BB]
+*** HOLE CARDS ***
+Hero: [7s 9h]
+*** PRE-FLOP ***
+20:00:01 - Hero: Posts SB 20
+20:00:01 - Vilain1: Posts BB 40
+20:00:05 - Hero: Folds
+*** SUMMARY ***
+Vilain1 wins the pot of 60
+----
+*** HEADER ***
+Hand ID: 1023
+Game ID: 505
+Game Mode: Spin
+Date & Time: 2026-09-06 20:35:00
+Game Name: Expresso 5€
+Buy In: 5 EUR
+Prize pool: 10 EUR
+Multiplier: x2
+Blinds: 25/50
+Total Pot: 0
+Rake: 0
+*** PLAYERS ***
+Seat 1: Hero (-50) [Hero BB]
+Seat 2: Vilain1 (1050) [SB BTN]
+*** HOLE CARDS ***
+Hero: [3d Td]
+*** PRE-FLOP ***
+20:00:01 - Vilain1: Posts SB 25
+20:00:01 - Hero: Posts BB 50
+20:00:05 - Vilain1: Raises to 100
+20:00:07 - Hero: Calls 50
+*** FLOP *** [2h Kd Ah]
+20:01:00 - Hero: Bets -150 and is all-in
+20:01:01 - Vilain1: Calls 950 and is all-in
+*** TURN *** [2h Kd Ah 6c]
+*** RIVER *** [2h Kd Ah 6c 9d]
+*** SHOWDOWN ***
+Hero shows [3d Td] (Une combinaison)
+Vilain1 shows [6s 5s] (Une combinaison)
+*** SUMMARY ***
+Hero wins the pot of 1000
+Hero finished 1st and wins 10.00 EUR
+Vilain1 finished 2nd
