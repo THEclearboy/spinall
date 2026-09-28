@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { GrilleMains, Legende } from "./Grille.jsx";
-import { ACTIONS, FAMILLES, exporterRangesCorrigees } from "../lib/charts.js";
+import { ACTIONS_EDITEUR, FAMILLES, exporterRangesCorrigees } from "../lib/charts.js";
 import { telechargerJson } from "../lib/stockage.js";
 
 /** Onglet Ranges : consulter et corriger les tableaux case par case. */
@@ -8,10 +8,11 @@ export function Ranges({ donnees, charts, overrides, setOverrides }) {
   const [chartId, setChartId] = useState(charts[0].id);
   const chart = charts.find((c) => c.id === chartId);
 
-  /** Fait tourner l'action de la case (allin → call → raise → fold → allin). */
+  /** Fait tourner l'action de la case (allin → call → raise → fold → mixtes → allin). */
   function basculerCase(main) {
     const actuelle = chart.mains[main];
-    const suivante = ACTIONS[(ACTIONS.indexOf(actuelle) + 1) % ACTIONS.length];
+    const index = ACTIONS_EDITEUR.indexOf(actuelle);
+    const suivante = ACTIONS_EDITEUR[(index + 1) % ACTIONS_EDITEUR.length];
     setOverrides((o) => {
       const corrections = { ...(o[chartId] || {}) };
       const origine = donnees.charts.find((c) => c.id === chartId);
@@ -50,8 +51,8 @@ export function Ranges({ donnees, charts, overrides, setOverrides }) {
                     onClick={() => setChartId(c.id)}
                   >
                     {c.depth_max_bb === null
-                      ? `${c.depth_min_bb} bb et +`
-                      : `${c.depth_min_bb}–${c.depth_max_bb} bb`}
+                      ? `${c.depth_min_bb.toLocaleString("fr-FR")} bb et +`
+                      : `${c.depth_min_bb.toLocaleString("fr-FR")}–${c.depth_max_bb.toLocaleString("fr-FR")} bb`}
                   </button>
                 ))}
             </div>
@@ -62,7 +63,8 @@ export function Ranges({ donnees, charts, overrides, setOverrides }) {
         <h2>{chart.titre_origine}</h2>
         <p className="muet">
           Action par défaut : <strong>{chart.action_par_defaut}</strong> — cliquer sur une case pour
-          faire tourner son action (les corrections sont enregistrées automatiquement).
+          faire tourner son action : all-in, call, raise, fold, puis les cases mixtes (deux actions acceptées). Les
+          corrections sont enregistrées automatiquement.
           {chart.commentaire && (
             <>
               <br />

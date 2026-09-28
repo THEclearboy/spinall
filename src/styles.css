@@ -1586,6 +1586,17 @@ tr:last-child td {
 .pastille.action-fold {
   background: var(--fold);
 }
+.pastille.action-mixte {
+  background: linear-gradient(90deg, var(--allin) 50%, var(--call) 50%);
+}
+.case.action-mixte {
+  color: var(--texte-sombre);
+}
+.case.action-mixte.allin-fold,
+.case.action-mixte.call-fold,
+.case.action-mixte.raise-fold {
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+}
 
 /* ------------------------------------------------------------ statistiques */
 .stat-globale {

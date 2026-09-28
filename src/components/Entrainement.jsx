@@ -4,7 +4,7 @@ import { GrilleMains, Legende } from "./Grille.jsx";
 import { Bento, Tuile } from "./ui/Tuile.jsx";
 import { Anneau } from "./graphes/Anneaux.jsx";
 import { texteCarte } from "../lib/cartes.js";
-import { actionAttendue, labelAction } from "../lib/charts.js";
+import { actionAttendue, labelAction, estCorrecte, actionsDe } from "../lib/charts.js";
 import { tirerQuestion, majPoids } from "../lib/entrainement.js";
 import { sonBonneReponse, sonMauvaiseReponse } from "../lib/sons.js";
 
@@ -51,7 +51,7 @@ export function Entrainement({ charts, reglages, setReglages, poids, setPoids, s
   function repondre(action) {
     if (phase !== "question" || !question) return;
     const attendu = actionAttendue(question.chart, question.main);
-    const correct = action === attendu;
+    const correct = estCorrecte(attendu, action);
     setResultat({ action, attendu, correct });
     setPhase("feedback");
     if (correct) {
@@ -161,7 +161,7 @@ export function Entrainement({ charts, reglages, setReglages, poids, setPoids, s
             {famille.boutons.map((bouton) => {
               let classe = `bouton-poker action-${bouton.action}`;
               if (enFeedback) {
-                if (bouton.action === resultat.attendu) classe += " correcte";
+                if (actionsDe(resultat.attendu).includes(bouton.action)) classe += " correcte";
                 else if (bouton.action === resultat.action) classe += " fausse";
                 else classe += " estompee";
               }
@@ -182,6 +182,7 @@ export function Entrainement({ charts, reglages, setReglages, poids, setPoids, s
               <p className="verdict">
                 {resultat.correct ? "✔ Correct !" : "✘ Raté."} <strong>{question.main}</strong> à
                 ce stack = <strong>{labelAction(famille.id, resultat.attendu)}</strong>
+                {actionsDe(resultat.attendu).length > 1 && <span className="muet"> (case mixte)</span>}
               </p>
               <div className="toast-boutons">
                 <button className="bouton principal" onClick={suivante} autoFocus>

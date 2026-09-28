@@ -1,4 +1,4 @@
-import { nomMainParIndices } from "../lib/charts.js";
+import { nomMainParIndices, classeAction, styleAction } from "../lib/charts.js";
 
 /**
  * Grille 13×13 des mains colorée par action.
@@ -9,7 +9,8 @@ export function GrilleMains({ mains, mainsModifiees, surligne, onClique, mini = 
   for (let l = 0; l < 13; l++)
     for (let c = 0; c < 13; c++) {
       const main = nomMainParIndices(l, c);
-      const classes = ["case", `action-${mains[main]}`];
+      const classes = ["case", classeAction(mains[main])];
+      const style = styleAction(mains[main]);
       if (surligne === main) classes.push("surlignee");
       if (mainsModifiees && mainsModifiees.has(main)) classes.push("modifiee");
       const cle = main + l + "-" + c;
@@ -18,13 +19,14 @@ export function GrilleMains({ mains, mainsModifiees, surligne, onClique, mini = 
           <button
             key={cle}
             className={classes.join(" ")}
+            style={style}
             onClick={() => onClique(main)}
             title={`${main} — cliquer pour changer l'action`}
           >
             {main}
           </button>
         ) : (
-          <div key={cle} className={classes.join(" ")}>
+          <div key={cle} className={classes.join(" ")} style={style}>
             {main}
           </div>
         ),
@@ -40,6 +42,7 @@ export function Legende() {
       <span className="pastille action-call" /> Call / Limp / Check
       <span className="pastille action-raise" /> Raise
       <span className="pastille action-fold" /> Fold
+      <span className="pastille action-mixte" /> Mixte : les deux actions sont bonnes
     </div>
   );
 }

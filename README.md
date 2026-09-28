@@ -78,6 +78,18 @@ tests/                     node --test, avec un historique synthétique dans fix
 | `localStorage` `expresso.situation` | dernière situation mise en scène |
 | IndexedDB `expresso-trainer` / `donnees` / `analyse` | mains importées et fichiers déjà importés |
 
+## Mettre à jour un tableau depuis une capture d'écran
+
+`scripts/lire_tableaux2.py` (Python, Pillow + numpy) détecte les grilles 13×13 dans une image,
+lit la couleur de chaque case (rouge = all-in, vert = call/limp/check, bleu = fold, orange = raise)
+et repère les cases **mixtes** (moitié gauche / moitié droite : les deux actions sont acceptées,
+notées `"allin/call"`). Il imprime les exceptions à coller dans `src/data/ranges.json`.
+
+```bash
+pip install pillow numpy
+python3 scripts/lire_tableaux2.py capture.png
+```
+
 ## Conventions des tableaux
 
 Intervalles de profondeur semi-ouverts `[min, max)` en big blinds, stacks avant blinds.

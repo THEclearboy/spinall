@@ -3,6 +3,31 @@
 import { RANGS } from "./cartes.js";
 
 export const ACTIONS = ["allin", "call", "raise", "fold"];
+/** Cycle de l'éditeur de ranges : les quatre actions puis les cases mixtes. */
+export const ACTIONS_EDITEUR = ["allin", "call", "raise", "fold", "allin/call", "allin/fold", "call/fold", "raise/fold"];
+
+/** "allin/call" → ["allin", "call"] ; "fold" → ["fold"]. */
+export function actionsDe(attendu) {
+  return String(attendu).split("/");
+}
+
+/** Vrai si l'action jouée fait partie des actions acceptées (case mixte ou non). */
+export function estCorrecte(attendu, action) {
+  return actionsDe(attendu).includes(action);
+}
+
+/** Classe CSS d'une case : "action-allin", "action-mixte allin-call"… */
+export function classeAction(attendu) {
+  const actions = actionsDe(attendu);
+  return actions.length > 1 ? `action-mixte ${actions.join("-")}` : `action-${actions[0]}`;
+}
+
+/** Style de fond d'une case mixte (deux couleurs côte à côte). */
+export function styleAction(attendu) {
+  const actions = actionsDe(attendu);
+  if (actions.length < 2) return undefined;
+  return { background: `linear-gradient(90deg, var(--${actions[0]}) 50%, var(--${actions[1]}) 50%)` };
+}
 
 /** Les trois situations couvertes par les tableaux. */
 export const FAMILLES = {
@@ -49,7 +74,9 @@ export function familleDuChart(chart) {
 
 /** Libellé d'une action dans le contexte d'une famille ("Limp", "Check"…). */
 export function labelAction(familleId, action) {
-  const bouton = FAMILLES[familleId].boutons.find((b) => b.action === action);
+  const actions = actionsDe(action);
+  if (actions.length > 1) return actions.map((a) => labelAction(familleId, a)).join(" ou ");
+  const bouton = FAMILLES[familleId]?.boutons.find((b) => b.action === action);
   return bouton
     ? bouton.label
     : { allin: "All-in", call: "Call", raise: "Raise", fold: "Fold" }[action] || action;

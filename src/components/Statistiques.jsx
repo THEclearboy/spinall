@@ -14,6 +14,17 @@ const LIBELLES_ACTIONS = {
   fold: "Fold",
 };
 const COULEURS_ACTIONS = { allin: "var(--allin)", call: "var(--call)", raise: "var(--raise)", fold: "#6b6b6b" };
+const libelleAction = (cle) =>
+  cle
+    .split("/")
+    .map((a) => LIBELLES_ACTIONS[a] || a)
+    .join(" ou ");
+const couleurAction = (cle) => {
+  const parts = cle.split("/");
+  return parts.length > 1
+    ? `linear-gradient(90deg, ${COULEURS_ACTIONS[parts[0]] || "#666"} 50%, ${COULEURS_ACTIONS[parts[1]] || "#666"} 50%)`
+    : COULEURS_ACTIONS[cle] || "#666";
+};
 const COULEURS_ANNEAUX = ["#d9ff5a", "#a8d43a", "#6f8f2a"];
 
 export function Precision({ valeur }) {
@@ -98,7 +109,7 @@ export function Statistiques({ charts, historique }) {
               <div key={g.cle} className="barre-h">
                 <div className="barre-h-entete">
                   <span>
-                    <span className="lv-pastille" style={{ background: COULEURS_ACTIONS[g.cle] || "#666" }} /> {LIBELLES_ACTIONS[g.cle] || g.cle}
+                    <span className="lv-pastille" style={{ background: couleurAction(g.cle) }} /> {libelleAction(g.cle)}
                   </span>
                   <span>
                     <strong>{g.precision === null ? "—" : `${g.precision} %`}</strong> <span className="muet">· {g.total}</span>

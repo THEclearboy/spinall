@@ -1,7 +1,7 @@
 {
   "format_version": 1,
   "jeu": "Expresso Betclic (Spin & Go 3-max hyper-turbo) — SEUL format couvert",
-  "source": "Tableaux de ranges pré-flop fournis par un ami, retranscrits depuis 10 captures d'écran le 25/08/2026",
+  "source": "Tableaux de ranges pré-flop fournis par un ami, retranscrits depuis 10 captures d'écran le 25/08/2026 ; HU SB 0-5,5 et HU BB vs limp 0-5 remplacés le 28/09/2026 par les nouvelles captures (lecture automatique, case par case).",
   "actions": {
     "allin": {
       "label": "All-in",
@@ -22,6 +22,10 @@
     "fold": {
       "label": "Fold",
       "couleur_origine": "bleu"
+    },
+    "mixte": {
+      "label": "Mixte",
+      "semantique": "Case partagée en deux couleurs sur la capture : les deux actions sont acceptées (ex. 'allin/call')."
     }
   },
   "convention_profondeur": "Intervalles semi-ouverts : [min, max). Exemple : à exactement 5bb on utilise le tableau 5-12. depth_max_bb = null signifie 'et plus'. La profondeur de référence = stack effectif du héros en big blinds. Convention appliquée par l'app (stacks avant blinds) : en HU, min des deux stacks ; en 3-way, min(stack du héros, plus gros stack adverse) — à confirmer avec l'auteur des tableaux pour le cas 3-way à stacks adverses très différents.",
@@ -32,22 +36,44 @@
   ],
   "hors_perimetre": "Toute autre situation (BB HU face à une relance, SB/BB en 3-way, BTN face à limp ou relance, etc.) = libre arbitre du joueur. Le simulateur ne doit JAMAAIS interroger dessus ni inventer de range.",
   "cases_a_verifier_par_l_utilisateur": [
-    "HU_SB_5-12 : QQ — la case semble mixte (vert avec une part de rouge) sur la capture. Retranscrit ici en 'call', à confirmer avec l'ami.",
     "3W_BTN_10-15 : Q9o / J9o / T9o retranscrits en fold, K9o et KTo en raise — vérifier.",
-    "3W_BTN_15+ : Q9o / J9o / T9o retranscrits en raise — vérifier."
+    "3W_BTN_15+ : Q9o / J9o / T9o retranscrits en raise — vérifier.",
+    "HU_SB_5,5-12 : l'ancien tableau 5-12 s'applique dès 5,5 bb en attendant la nouvelle capture."
   ],
   "charts": [
     {
       "id": "HU_SB_0-5",
-      "titre_origine": "HU - SB - 0-5bb",
+      "titre_origine": "HU - SB - 0-5,5bb",
       "format_table": "HU",
       "position_heros": "SB",
       "contexte": "Premier de parole",
       "depth_min_bb": 0,
-      "depth_max_bb": 5,
+      "depth_max_bb": 5.5,
       "action_par_defaut": "allin",
       "exceptions": {
+        "call": [
+          "AA",
+          "KK"
+        ],
+        "allin/call": [
+          "QQ"
+        ],
+        "allin/fold": [
+          "T5o",
+          "95o",
+          "85o",
+          "75o",
+          "65o",
+          "T4o",
+          "T3o",
+          "T2o"
+        ],
         "fold": [
+          "94o",
+          "84o",
+          "74o",
+          "64o",
+          "54o",
           "93o",
           "83o",
           "73o",
@@ -62,15 +88,16 @@
           "42o",
           "32o"
         ]
-      }
+      },
+      "commentaire": "AA et KK = limp piège ; QQ = mixte (all-in ou limp). T5o-T2o et 95o-65o = mixte (all-in ou fold) ; le reste des petites offsuit se couche. Tableau mis à jour le 28/09/2026 (lecture automatique de la capture)."
     },
     {
       "id": "HU_SB_5-12",
-      "titre_origine": "HU - SB - 5bb - 12bb",
+      "titre_origine": "HU - SB - 5,5bb - 12bb",
       "format_table": "HU",
       "position_heros": "SB",
       "contexte": "Premier de parole",
-      "depth_min_bb": 5,
+      "depth_min_bb": 5.5,
       "depth_max_bb": 12,
       "action_par_defaut": "call",
       "exceptions": {
@@ -193,8 +220,101 @@
       "depth_min_bb": 0,
       "depth_max_bb": 5,
       "action_par_defaut": "allin",
-      "exceptions": {},
-      "commentaire": "100 % des mains partent all-in face au limp à cette profondeur."
+      "exceptions": {
+        "allin/call": [
+          "JTs",
+          "J9s",
+          "J8s",
+          "J7s",
+          "J6s",
+          "J5s",
+          "J4s",
+          "J3s",
+          "J2s",
+          "JTo",
+          "T9s",
+          "T8s",
+          "T7s",
+          "T6s",
+          "T5s",
+          "T4s",
+          "T3s",
+          "T2s",
+          "J9o",
+          "T9o",
+          "98s",
+          "97s",
+          "96s",
+          "95s",
+          "94s",
+          "93s",
+          "92s",
+          "J8o",
+          "T8o",
+          "98o",
+          "87s",
+          "86s",
+          "85s",
+          "84s",
+          "83s",
+          "82s",
+          "J7o",
+          "T7o",
+          "97o",
+          "87o",
+          "76s",
+          "75s",
+          "74s",
+          "73s",
+          "72s",
+          "J6o",
+          "T6o",
+          "96o",
+          "86o",
+          "76o",
+          "65s",
+          "64s",
+          "63s",
+          "62s",
+          "J5o",
+          "T5o",
+          "95o",
+          "85o",
+          "75o",
+          "65o",
+          "54s",
+          "53s",
+          "52s",
+          "J4o",
+          "T4o",
+          "94o",
+          "84o",
+          "74o",
+          "64o",
+          "54o",
+          "43s",
+          "42s",
+          "J3o",
+          "T3o",
+          "93o",
+          "83o",
+          "73o",
+          "63o",
+          "53o",
+          "43o",
+          "32s",
+          "J2o",
+          "T2o",
+          "92o",
+          "82o",
+          "72o",
+          "62o",
+          "52o",
+          "42o",
+          "32o"
+        ]
+      },
+      "commentaire": "Toute main avec un As, un Roi, une Dame ou une paire = all-in ; toutes les autres = mixte (all-in ou check). Tableau mis à jour le 28/09/2026 (lecture automatique de la capture)."
     },
     {
       "id": "HU_BB_vsLimp_5-10",

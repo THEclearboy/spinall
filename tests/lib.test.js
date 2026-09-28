@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import donnees from "../src/data/ranges.json" with { type: "json" };
 import { nomMain, combinaisonsDeMain, tirerDeuxCartes } from "../src/lib/cartes.js";
-import { construireCharts, trouverChart, toutesLesMains, exporterRangesCorrigees } from "../src/lib/charts.js";
+import { construireCharts, trouverChart, toutesLesMains, exporterRangesCorrigees, labelAction, estCorrecte } from "../src/lib/charts.js";
 import { tirerQuestion, majPoids, tirerProfondeur } from "../src/lib/entrainement.js";
 import { parseFichier, resultatJoueur, empreinteFichier } from "../src/lib/historique-mains.js";
 import { evaluer, codeCarte, equite } from "../src/lib/equite.js";
@@ -31,8 +31,8 @@ test("charts : 169 mains, exceptions et corrections appliquées", () => {
   const charts = construireCharts(donnees);
   assert.equal(charts.length, donnees.charts.length);
   assert.equal(toutesLesMains().length, 169);
-  const huSb = trouverChart(charts, "HU_SB", 5);
-  assert.equal(huSb.id, "HU_SB_5-12", "intervalle semi-ouvert : 5bb → tableau 5-12");
+  const huSb = trouverChart(charts, "HU_SB", 5.5);
+  assert.equal(huSb.id, "HU_SB_5-12", "intervalle semi-ouvert : 5,5bb → tableau 5,5-12");
   assert.equal(huSb.mains["AKs"], "allin");
   assert.equal(huSb.mains["72o"], "fold");
   assert.equal(huSb.mains["Q7o"], "call");
@@ -185,4 +185,25 @@ test("situation : positions et cartes utilisées", async () => {
   const copie = decoderSituation(encoderSituation(s));
   assert.deepEqual(copie.sieges[0].cartes, ["Ah", "Kd"]);
   assert.throws(() => decoderSituation("{}"));
+});
+
+test("cases mixtes : deux actions acceptées, nouveaux tableaux HU", () => {
+  const charts = construireCharts(donnees);
+  const sb = trouverChart(charts, "HU_SB", 5.2);
+  assert.equal(sb.id, "HU_SB_0-5", "0-5,5 bb couvre 5,2 bb");
+  assert.equal(sb.mains["AA"], "call");
+  assert.equal(sb.mains["QQ"], "allin/call");
+  assert.equal(sb.mains["T5o"], "allin/fold");
+  assert.equal(sb.mains["94o"], "fold");
+  assert.equal(sb.mains["T6o"], "allin");
+  assert.equal(trouverChart(charts, "HU_SB", 5.5).id, "HU_SB_5-12");
+  const bb = trouverChart(charts, "HU_BB", 3);
+  assert.equal(bb.mains["A2o"], "allin");
+  assert.equal(bb.mains["22"], "allin");
+  assert.equal(bb.mains["J2s"], "allin/call");
+  assert.equal(bb.mains["72o"], "allin/call");
+  assert.equal(labelAction("HU_BB", "allin/call"), "All-in ou Check");
+  assert.equal(estCorrecte("allin/call", "call"), true);
+  assert.equal(estCorrecte("allin/call", "raise"), false);
+  assert.equal(estCorrecte("fold", "fold"), true);
 });

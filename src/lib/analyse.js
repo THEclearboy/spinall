@@ -1,7 +1,7 @@
 // Analyse des mains importées : positions, spots pré-flop couverts par les
 // tableaux, regroupement en parties, statistiques et EV à tapis.
 import { nomMain, carteDepuisTexte } from "./cartes.js";
-import { trouverChart, actionAttendue } from "./charts.js";
+import { trouverChart, actionAttendue, estCorrecte, actionsDe } from "./charts.js";
 import { misesDetaillees, resultatJoueur } from "./historique-mains.js";
 import { equite } from "./equite.js";
 
@@ -76,7 +76,8 @@ export function spotPreflop(main, charts) {
   else return null;
 
   // Un call à tapis vaut un all-in.
-  const conforme = jouee === attendu || (jouee === "call" && actionHero.allin && attendu === "allin");
+  const conforme =
+    estCorrecte(attendu, jouee) || (jouee === "call" && actionHero.allin && actionsDe(attendu).includes("allin"));
   return {
     handId: main.id,
     date: main.date,
