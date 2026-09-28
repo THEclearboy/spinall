@@ -14,7 +14,7 @@ export function CarteJeu({ carte, classe }) {
 export function CarteInline({ texte }) {
   const couleur = texte[1];
   return (
-    <span className={estRouge(couleur) ? "carte-inline rouge" : "carte-inline"}>
+    <span className={`carte-inline couleur-${couleur}${estRouge(couleur) ? " rouge" : ""}`}>
       {texte[0] === "T" ? "10" : texte[0]}
       {SYMBOLES[couleur]}
     </span>

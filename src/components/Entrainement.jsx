@@ -155,6 +155,7 @@ export function Entrainement({ charts, reglages, setReglages, poids, setPoids, s
           famille={famille.id}
           cartes={question.cartes}
           profondeur={question.profondeur}
+          titre={famille.nom}
           contexte={famille.contexte}
         >
           <div className="panneau-actions">

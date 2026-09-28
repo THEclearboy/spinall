@@ -56,25 +56,30 @@ function Mise({ position, montant, badge }) {
  * board : cartes du tableau ("Ah"…), pot : montant affiché (bb),
  * contexte : texte de la bulle, info : { titre, valeur } (encart en haut à droite).
  */
-export function Table({ sieges, board = [], pot, contexte, info, children }) {
+export function Table({ sieges, board = [], pot, contexte, sous, info, children }) {
   const hero = sieges.find((s) => s.position === "hero");
   const adversaires = sieges.filter((s) => s.position !== "hero");
   const dealer = sieges.find((s) => s.dealer);
   const cartesHero = hero.cartes || [];
   return (
     <div className="scene">
-      {contexte && <div className="barre-scene">{contexte}</div>}
-      {info && (
-        <div className="carte-info">
-          {info.titre}
-          <strong>{info.valeur}</strong>
+      <header className="scene-entete">
+        <div className="barre-scene">
+          {contexte}
+          {sous && <span className="scene-sous">{sous}</span>}
         </div>
-      )}
+        {info && (
+          <div className="carte-info">
+            {info.titre}
+            <strong>{info.valeur}</strong>
+          </div>
+        )}
+      </header>
       <div className="table-stade">
         <div className="rail" />
         <div className="feutre" />
         <div className="pot">
-          Pot <strong>{formatNombre(pot)} bb</strong>
+          Pot<strong>{formatNombre(pot)} bb</strong>
         </div>
         {board.some(Boolean) && (
           <div className="board">

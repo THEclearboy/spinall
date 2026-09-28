@@ -2,7 +2,7 @@ import { Table } from "./Table.jsx";
 import { formatBb } from "../lib/format.js";
 
 /** La table de l'entraînement : mise en place fixe selon la famille de situation. */
-export function TableScene({ famille, cartes, profondeur, contexte, children }) {
+export function TableScene({ famille, cartes, profondeur, contexte, titre, children }) {
   let sieges;
   let pot;
   if (famille === "HU_SB") {
@@ -26,7 +26,7 @@ export function TableScene({ famille, cartes, profondeur, contexte, children }) 
     ];
   }
   return (
-    <Table sieges={sieges} pot={pot} contexte={contexte} info={{ titre: "Stack effectif", valeur: formatBb(profondeur) }}>
+    <Table sieges={sieges} pot={pot} contexte={titre} sous={contexte} info={{ titre: "Stack effectif", valeur: formatBb(profondeur) }}>
       {children}
     </Table>
   );

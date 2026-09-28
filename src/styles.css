@@ -1048,99 +1048,116 @@ tr:last-child td {
   border-radius: var(--rayon);
   overflow: hidden;
   background: var(--sombre);
-  padding: 64px 16px 96px;
+  padding: 18px 22px 96px;
   min-height: 560px;
+  display: flex;
+  flex-direction: column;
 }
-.barre-scene {
-  position: absolute;
-  top: 16px;
-  left: 20px;
-  max-width: min(70%, 560px);
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--texte);
-  border-radius: 980px;
-  padding: 8px 16px;
-  font-size: 0.78rem;
-  font-weight: 600;
+.scene-entete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   z-index: 6;
 }
+.barre-scene {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  max-width: 62%;
+}
+.barre-scene .scene-sous {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texte-muet);
+}
 .carte-info {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: var(--lime);
-  color: var(--texte-sombre);
-  border-radius: var(--rayon-petit);
-  padding: 8px 14px;
+  text-align: right;
   font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  text-align: right;
-  z-index: 5;
+  color: var(--texte-muet);
   display: flex;
   flex-direction: column;
+  flex: none;
 }
 .carte-info strong {
-  font-size: 1.15rem;
+  font-size: 1.7rem;
   font-weight: 800;
   letter-spacing: -0.03em;
+  line-height: 1;
   text-transform: none;
+  color: var(--lime);
 }
 .table-stade {
   position: relative;
-  margin: 46px auto 0;
+  margin: 56px auto 0;
   width: min(620px, 100%);
   height: 320px;
   z-index: 1;
 }
 .rail {
-  position: absolute;
-  inset: 0;
-  border-radius: 170px;
-  background: var(--rail);
-  box-shadow: 0 14px 34px #00000080;
+  display: none;
 }
 .feutre {
   position: absolute;
-  inset: 10px;
-  border-radius: 160px;
-  background: radial-gradient(ellipse at 50% 30%, var(--feutre-clair), var(--feutre) 62%);
-  border: 2px solid var(--feutre-bord);
+  inset: 0;
+  border-radius: 170px;
+  background: var(--sombre-2);
+  border: 2px solid var(--sombre-3);
 }
 .feutre:before {
   content: "";
   position: absolute;
-  inset: 18px;
-  border-radius: 150px;
-  border: 1.5px solid rgba(255, 255, 255, 0.13);
+  inset: 14px;
+  border-radius: 156px;
+  border: 1px dashed rgba(255, 255, 255, 0.14);
 }
 .feutre:after {
-  content: "EXPRESSO";
+  content: "EXPRESSO TRAINER";
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffffff14;
-  font-size: 1.9rem;
+  right: 44px;
+  bottom: 26px;
+  text-align: right;
+  color: rgba(255, 255, 255, 0.22);
+  font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.4em;
+  letter-spacing: 0.3em;
 }
 .pot {
   position: absolute;
   left: 50%;
-  top: 30%;
+  top: 37%;
   transform: translate(-50%);
-  color: #ffffffd9;
-  font-size: 0.8rem;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texte-muet);
+}
+.pot strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--texte);
+  margin-top: 3px;
 }
 .board {
   position: absolute;
   left: 50%;
-  top: 50%;
-  transform: translate(-50%, -38%);
+  top: 62%;
+  transform: translate(-50%, -50%);
   display: flex;
   gap: 6px;
   z-index: 3;
@@ -1171,115 +1188,120 @@ tr:last-child td {
   transform: translate(-50%);
 }
 .pod.couche {
-  opacity: 0.45;
+  opacity: 0.4;
 }
 .dos-paire {
   display: flex;
-  gap: 3px;
-  margin-bottom: -14px;
+  gap: 4px;
+  margin-bottom: -12px;
 }
 .dos-paire span {
   width: 26px;
   height: 36px;
-  border-radius: 6px;
-  background: linear-gradient(160deg, var(--lavande), var(--violet));
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 6px #00000038;
-}
-.dos-paire span:first-child {
-  transform: rotate(-5deg);
-}
-.dos-paire span:last-child {
-  transform: rotate(5deg);
+  border-radius: 7px;
+  background: var(--lavande);
+  border: 2px solid var(--sombre);
 }
 .cartes-vilain {
   display: flex;
-  gap: 3px;
-  margin-bottom: -14px;
+  gap: 4px;
+  margin-bottom: -12px;
   position: relative;
   z-index: 2;
 }
 .etiquette-pod {
   background: var(--sombre);
   color: var(--texte);
-  border-radius: var(--rayon-petit);
-  padding: 6px 16px;
+  border: 1.5px solid var(--sombre-3);
+  border-radius: 980px;
+  padding: 7px 18px;
   text-align: center;
   min-width: 118px;
-  box-shadow: 0 3px 12px #00000059;
   position: relative;
   z-index: 3;
+  line-height: 1.15;
 }
 .etiquette-pod .nom {
-  font-size: 0.7rem;
+  font-size: 0.62rem;
   color: var(--texte-muet);
-  font-weight: 600;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .etiquette-pod .stack {
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.05rem;
   letter-spacing: -0.02em;
 }
 .etiquette-pod.claire {
-  background: var(--blanc);
+  background: var(--lime);
   color: var(--texte-sombre);
+  border-color: var(--lime);
 }
 .etiquette-pod.claire .nom {
-  color: var(--texte-sombre-muet);
+  color: #4a5a12;
 }
 .position-siege {
   display: inline-block;
-  margin-left: 6px;
-  padding: 1px 7px;
+  margin-left: 0;
+  padding: 2px 7px;
   border-radius: 980px;
-  background: var(--lime);
-  color: var(--texte-sombre);
-  font-size: 0.6rem;
+  background: var(--lavande);
+  color: #14143a;
+  font-size: 0.58rem;
   font-weight: 800;
+  letter-spacing: 0.02em;
   vertical-align: middle;
+}
+.etiquette-pod.claire .position-siege {
+  background: var(--texte-sombre);
+  color: var(--lime);
 }
 .cartes-hero {
   display: flex;
   justify-content: center;
-  margin-bottom: -16px;
+  gap: 8px;
+  margin-bottom: -10px;
   position: relative;
   z-index: 2;
 }
 .carte-jeu {
   width: 76px;
   height: 106px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px #00000066;
+  background: var(--blanc);
+  border-radius: 14px;
   position: relative;
+  border: 3px solid var(--blanc);
 }
 .carte-jeu .rang {
   position: absolute;
-  top: 3px;
+  top: 4px;
   left: 9px;
   font-size: 2rem;
   font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
 }
 .carte-jeu .symbole {
   position: absolute;
-  bottom: 1px;
-  right: 7px;
-  font-size: 2.5rem;
+  bottom: 0;
+  right: 8px;
+  font-size: 2.4rem;
   line-height: 1.1;
 }
-.carte-jeu.inclinee-g {
-  transform: rotate(-7deg) translate(7px, 3px);
-}
+.carte-jeu.inclinee-g,
 .carte-jeu.inclinee-d {
-  transform: rotate(7deg) translate(-7px, 3px);
+  transform: none;
 }
 .carte-jeu.petite {
   width: 44px;
   height: 62px;
-  border-radius: 8px;
-  box-shadow: 0 3px 10px #00000059;
+  border-radius: 9px;
+  border-width: 2px;
 }
 .carte-jeu.petite .rang {
   top: 1px;
@@ -1289,56 +1311,53 @@ tr:last-child td {
 .carte-jeu.petite .symbole {
   bottom: 0;
   right: 4px;
-  font-size: 1.35rem;
+  font-size: 1.3rem;
 }
 .carte-jeu.vide {
-  background: rgba(255, 255, 255, 0.16);
-  border: 2px dashed rgba(255, 255, 255, 0.55);
-  box-shadow: none;
+  background: transparent;
+  border: 2px dashed var(--sombre-3);
 }
 .couleur-h {
   color: #e0382e;
 }
 .couleur-d {
-  color: #e8834a;
+  color: #5b5bf5;
 }
 .couleur-s {
-  color: #1c1c1e;
+  color: #111111;
 }
 .couleur-c {
-  color: #2f6b3a;
+  color: #2f8f4f;
 }
 .mise {
   position: absolute;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 9px 3px 5px;
+  gap: 6px;
+  padding: 4px 11px;
   font-size: 0.72rem;
   font-weight: 800;
   color: var(--texte-sombre);
-  background: var(--blanc);
+  background: var(--lime);
   border-radius: 980px;
   z-index: 3;
-  box-shadow: 0 2px 8px #00000047;
 }
 .mise .jeton {
-  width: 14px;
-  height: 14px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--orange);
-  border: 2px dashed #fff;
-  box-shadow: 0 0 0 1px var(--orange);
+  background: var(--texte-sombre);
 }
 .badge-mise {
-  background: var(--lime);
+  background: var(--texte-sombre);
+  color: var(--lime);
   border-radius: 980px;
   padding: 1px 7px;
   font-size: 0.6rem;
   margin-left: 2px;
 }
 .mise-haut {
-  top: 62px;
+  top: 58px;
   left: 50%;
   transform: translate(-50%);
 }
@@ -1359,14 +1378,13 @@ tr:last-child td {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  background: var(--lime);
+  background: var(--blanc);
   color: var(--texte-sombre);
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px #00000047;
   z-index: 2;
 }
 .jeton-dealer.pos-hero {
@@ -1391,7 +1409,7 @@ tr:last-child td {
   bottom: 16px;
   display: flex;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sombre-2);
   border-radius: 980px;
   padding: 8px;
   z-index: 7;
@@ -1449,7 +1467,6 @@ tr:last-child td {
   border-radius: 18px;
   padding: 12px 16px;
   max-width: 330px;
-  box-shadow: 0 8px 26px #00000059;
   border-left: 6px solid var(--lime);
 }
 .toast.mauvais {
@@ -1819,6 +1836,12 @@ tr:last-child td {
 .carte-inline.rouge {
   color: #e0382e;
 }
+.carte-inline.couleur-d {
+  color: #5b5bf5;
+}
+.carte-inline.couleur-c {
+  color: #2f8f4f;
+}
 .badge-conforme {
   color: var(--lime);
   font-weight: 800;
@@ -2030,16 +2053,13 @@ tr:last-child td {
   margin: 8px 0;
 }
 .note-situation {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
+  position: relative;
+  margin: 92px 0 0;
   z-index: 7;
   background: var(--jaune);
   color: #1f1a05;
   border-radius: 18px;
   padding: 12px 16px;
-  box-shadow: 0 8px 26px #00000059;
   font-size: 0.92rem;
   font-weight: 600;
   white-space: pre-wrap;
@@ -2256,18 +2276,14 @@ tr:last-child td {
     border-radius: 20px;
   }
   .scene {
-    padding: 60px 8px 8px;
+    padding: 16px 12px 8px;
     min-height: 0;
   }
   .barre-scene {
-    left: 10px;
-    max-width: calc(100% - 128px);
-    font-size: 0.72rem;
-    padding: 7px 12px;
+    font-size: 0.7rem;
   }
-  .carte-info {
-    right: 10px;
-    padding: 6px 10px;
+  .carte-info strong {
+    font-size: 1.35rem;
   }
   .table-stade {
     height: 270px;
@@ -2324,7 +2340,6 @@ tr:last-child td {
     max-width: none;
   }
   .note-situation {
-    position: static;
     margin-top: 84px;
   }
   .grille {

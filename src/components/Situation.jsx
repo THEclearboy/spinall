@@ -142,6 +142,7 @@ export function Situation() {
         board={situation.board}
         pot={potTotal(situation)}
         contexte={`${rueCourante(situation)} — ${situation.format === "HU" ? "heads-up" : "3 joueurs"}`}
+        sous={`bouton : ${sieges.find((s) => s.dealer)?.nom || "—"}`}
         info={{ titre: "Pot", valeur: formatBb(potTotal(situation)) }}
       >
         {situation.note && <div className="note-situation">{situation.note}</div>}
