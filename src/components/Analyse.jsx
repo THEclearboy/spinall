@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bento, Tuile, Pilule } from "./ui/Tuile.jsx";
+import { Chargement, Tourne } from "./ui/Chargement.jsx";
 import { CarteInline } from "./Carte.jsx";
 import { GrilleMains, Legende } from "./Grille.jsx";
 import { DetailMain } from "./DetailMain.jsx";
@@ -284,7 +285,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           {analyse.mains.length > 0 && (
             <>
               <Pilule variante="clair" onClick={imprimer} titre="Ouvre le dialogue d'impression : choisis « Enregistrer en PDF »">
-                {calculEvTotal.points ? "Rapport PDF" : "Rapport : calcul…"}
+                {calculEvTotal.points ? "Rapport PDF" : <><Tourne /> Rapport</>}
               </Pilule>
               <Pilule variante="clair" onClick={viderBase}>
                 Vider la base
@@ -395,12 +396,20 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           sous="jetons gagnés par partie, chance neutralisée"
           action={<Pilule variante="clair" titre="Jetons gagnés en théorie : les tapis payés avant la river sont comptés à leur équité (pot × équité)">?</Pilule>}
         >
-          <div className={`tuile-grand ${cEV !== null && cEV < 0 ? "negatif" : "orange"}`}>
-            {cEV === null ? "…" : `${signe(cEV)}${unDecimal(cEV)}`}
-          </div>
-          <p className="tuile-pied">
-            {reelParPartie === null ? "calcul en cours" : `réel : ${signe(reelParPartie)}${unDecimal(reelParPartie)} jetons / partie`}
-          </p>
+          {cEV === null ? (
+            <Chargement avancement={calculEvTotal.avancement} texte="Calcul de l'équité des tapis" />
+          ) : (
+            <>
+              <div className={`tuile-grand ${cEV < 0 ? "negatif" : "orange"}`}>
+                {signe(cEV)}
+                {unDecimal(cEV)}
+              </div>
+              <p className="tuile-pied">
+                réel : {signe(reelParPartie)}
+                {unDecimal(reelParPartie)} jetons / partie
+              </p>
+            </>
+          )}
         </Tuile>
 
         <Tuile
@@ -440,7 +449,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
                       <td>{l.limite === null ? "Toutes" : euros(l.limite)}</td>
                       <td>{l.parties}</td>
                       <td className={l.cEV === null ? "" : l.cEV >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
-                        {l.cEV === null ? "…" : `${signe(l.cEV)}${unDecimal(l.cEV)}`}
+                        {l.cEV === null ? <Tourne /> : `${signe(l.cEV)}${unDecimal(l.cEV)}`}
                       </td>
                       <td className={l.netEuro >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
                         {signe(l.netEuro)}
@@ -498,7 +507,10 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
               </p>
             </>
           ) : (
-            <p className="tuile-legende">Calcul de l'équité des tapis… {Math.round(calculEv.avancement * 100)} %</p>
+            <Chargement
+              avancement={calculEvTotal.avancement}
+              texte={`Équité des tapis : ${pluriel("main", analyse.mains.length)} à passer en revue`}
+            />
           )}
         </Tuile>
 

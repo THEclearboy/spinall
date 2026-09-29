@@ -1,4 +1,5 @@
 import { euros, pourcent } from "../lib/format.js";
+import { Tourne } from "./ui/Chargement.jsx";
 
 const signe = (v) => (v >= 0 ? "+" : "");
 const unDecimal = (v) => v.toLocaleString("fr-FR", { maximumFractionDigits: 1 });
@@ -44,9 +45,9 @@ export function BilanLimites({ lignes, selection, onSelection }) {
                   {l.places[1]} / {l.places[2]} / {l.places[3]}
                 </td>
                 <td className={l.cEV === null ? "" : l.cEV >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
-                  {l.cEV === null ? "…" : `${signe(l.cEV)}${unDecimal(l.cEV)}`}
+                  {l.cEV === null ? <Tourne /> : `${signe(l.cEV)}${unDecimal(l.cEV)}`}
                 </td>
-                <td>{l.reelParPartie === null ? "…" : `${signe(l.reelParPartie)}${unDecimal(l.reelParPartie)}`}</td>
+                <td>{l.reelParPartie === null ? <Tourne /> : `${signe(l.reelParPartie)}${unDecimal(l.reelParPartie)}`}</td>
               </tr>
             );
           })}

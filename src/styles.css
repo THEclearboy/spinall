@@ -2459,3 +2459,99 @@ tr:last-child td {
 .tuile--jaune .lv-pastille {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
 }
+
+/* ------------------------------------------------------------ chargement */
+.chargement {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+.chargement-entete {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--t-muet, var(--texte-muet));
+}
+.chargement-texte {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.chargement-pct {
+  white-space: nowrap;
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--t-texte, var(--texte));
+  font-variant-numeric: tabular-nums;
+}
+.chargement-barre {
+  position: relative;
+  height: 12px;
+  border-radius: 980px;
+  background: var(--t-piste, rgba(255, 255, 255, 0.1));
+  overflow: hidden;
+}
+.chargement-remplissage {
+  position: relative;
+  height: 100%;
+  border-radius: 980px;
+  background: var(--lime);
+  transition: width 0.4s ease-out;
+  overflow: hidden;
+}
+.tuile--blanc .chargement-remplissage {
+  background: var(--orange);
+}
+.chargement-remplissage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: chargement-brillance 1.4s ease-in-out infinite;
+}
+@keyframes chargement-brillance {
+  to {
+    transform: translateX(100%);
+  }
+}
+.chargement.compact .chargement-pct {
+  font-size: 0.9rem;
+}
+.tourne {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2.5px solid var(--t-piste, rgba(255, 255, 255, 0.15));
+  border-top-color: var(--lime);
+  animation: tourne 0.8s linear infinite;
+  vertical-align: -2px;
+  flex: none;
+}
+.tuile--blanc .tourne {
+  border-top-color: var(--orange);
+}
+.pilule .tourne {
+  width: 11px;
+  height: 11px;
+  border-width: 2px;
+  border-top-color: currentColor;
+}
+@keyframes tourne {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tourne,
+  .chargement-remplissage::after {
+    animation: none;
+  }
+}
