@@ -843,7 +843,8 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         )}
       </div>
 
-      <RapportImpression
+      {calculEv.points && (
+        <RapportImpression
         analyse={{ ...analyse, mains: mainsScope }}
         limite={limiteActive}
         bilan={bilan}
@@ -853,6 +854,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         cEV={cEV}
         reelParPartie={reelParPartie}
       />
+      )}
     </section>
   );
 }

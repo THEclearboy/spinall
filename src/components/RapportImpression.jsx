@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { CartesKpi } from "./CartesKpi.jsx";
 import { BilanLimites } from "./BilanLimites.jsx";
 import { GrapheBankroll } from "./graphes/GrapheBankroll.jsx";
@@ -8,7 +9,7 @@ import { labelAction } from "../lib/charts.js";
 import { euros, dateHeure, ordinal, pluriel, formatBbArrondi } from "../lib/format.js";
 
 /** Version imprimable de l'analyse (visible uniquement via window.print, voir @media print). */
-export function RapportImpression({ analyse, stats, calculEv, conformite, cEV, reelParPartie, limite = null, bilan = [] }) {
+function RapportImpressionBrut({ analyse, stats, calculEv, conformite, cEV, reelParPartie, limite = null, bilan = [] }) {
   const dates = analyse.mains.map((m) => m.date).filter(Boolean);
   const debut = dates.length ? Math.min(...dates) : null;
   const fin = dates.length ? Math.max(...dates) : null;
@@ -142,3 +143,5 @@ export function RapportImpression({ analyse, stats, calculEv, conformite, cEV, r
     </div>
   );
 }
+
+export const RapportImpression = memo(RapportImpressionBrut);

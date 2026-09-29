@@ -3,9 +3,40 @@ import { cheminLisse, aireSousCourbe, indexSousSouris } from "./chemins.js";
 import { dateHeure, pluriel } from "../../lib/format.js";
 import { resultatJoueur } from "../../lib/historique-mains.js";
 import { tapisAvantRiver, jetonsAttendus } from "../../lib/analyse.js";
+import { lireBase, ecrireBase } from "../../lib/stockage.js";
+import EvWorker from "../../lib/ev.worker.js?worker&inline";
 
-// Cache des résultats par main (le calcul d'équité est coûteux).
+// Cache en mémoire des résultats par main ; il est aussi persisté dans IndexedDB
+// (clé "ev") pour ne jamais recalculer une main déjà vue.
 const cacheParMain = new Map();
+let cachePersistantCharge = null;
+
+async function chargerCachePersistant() {
+  if (!cachePersistantCharge)
+    cachePersistantCharge = (async () => {
+      const objet = await lireBase("ev");
+      if (objet && typeof objet === "object") for (const [id, r] of Object.entries(objet)) if (!cacheParMain.has(id)) cacheParMain.set(id, r);
+    })();
+  return cachePersistantCharge;
+}
+
+let sauvegardePrevue = null;
+function sauvegarderCache() {
+  if (sauvegardePrevue) return;
+  sauvegardePrevue = setTimeout(() => {
+    sauvegardePrevue = null;
+    ecrireBase("ev", Object.fromEntries(cacheParMain));
+  }, 500);
+}
+
+function calculerMain(main) {
+  const tapis = tapisAvantRiver(main);
+  return {
+    reel: main.hero ? resultatJoueur(main, main.hero) : 0,
+    ev: main.hero ? jetonsAttendus(main) : 0,
+    ajustee: !!(tapis && tapis.aVenir > 0),
+  };
+}
 
 /** Cumule réel / EV sur une liste de mains déjà calculées (triées par date). */
 export function cumulerEv(mains, parMain) {
@@ -26,9 +57,11 @@ export function cumulerEv(mains, parMain) {
 }
 
 /**
- * Calcule, par lots de 50 mains pour ne pas bloquer l'interface, les jetons réels et
- * attendus de chaque main. Retourne { points, avancement, nbAjustees, sommeReel, sommeEv,
- * parMain } ; `points` et `parMain` valent null tant que le calcul n'est pas terminé.
+ * Calcule les jetons réels et attendus de chaque main : d'abord depuis le cache
+ * (mémoire puis IndexedDB), puis dans un Web Worker pour les mains manquantes,
+ * avec repli sur le fil principal (par petits lots) si le worker est indisponible.
+ * Retourne { points, avancement, nbAjustees, sommeReel, sommeEv, parMain } ;
+ * `points` et `parMain` valent null tant que le calcul n'est pas terminé.
  */
 export function useCalculEv(mains) {
   const [etat, setEtat] = useState({
@@ -42,38 +75,86 @@ export function useCalculEv(mains) {
 
   useEffect(() => {
     let annule = false;
-    const triees = [...mains].sort((a, b) => (a.date || 0) - (b.date || 0));
-    const parMain = new Map();
-    let index = 0;
+    let worker = null;
 
-    function lot() {
+    (async () => {
+      await chargerCachePersistant();
       if (annule) return;
-      const fin = Math.min(index + 50, triees.length);
-      for (; index < fin; index++) {
-        const main = triees[index];
-        let calcule = cacheParMain.get(main.id);
-        if (!calcule) {
-          const tapis = tapisAvantRiver(main);
-          calcule = {
-            reel: main.hero ? resultatJoueur(main, main.hero) : 0,
-            ev: main.hero ? jetonsAttendus(main) : 0,
-            ajustee: !!(tapis && tapis.aVenir > 0),
-          };
-          cacheParMain.set(main.id, calcule);
-        }
-        parMain.set(main.id, calcule);
+      const manquantes = mains.filter((m) => !cacheParMain.has(m.id));
+      const terminer = () => {
+        const parMain = new Map();
+        for (const m of mains) if (cacheParMain.has(m.id)) parMain.set(m.id, cacheParMain.get(m.id));
+        if (!annule) setEtat(cumulerEv(mains, parMain));
+      };
+      if (manquantes.length === 0) {
+        terminer();
+        return;
       }
-      if (index < triees.length) {
-        setEtat((e) => ({ ...e, avancement: index / triees.length }));
-        setTimeout(lot, 0);
-      } else {
-        setEtat(cumulerEv(triees, parMain));
-      }
-    }
+      // Nouveau calcul : on repart d'un état « en cours » (pas de points périmés).
+      setEtat({
+        points: null,
+        avancement: (mains.length - manquantes.length) / mains.length,
+        nbAjustees: 0,
+        sommeReel: 0,
+        sommeEv: 0,
+        parMain: null,
+      });
 
-    lot();
+      // Les mises à jour d'avancement sont limitées à 3 par seconde pour ne pas
+      // re-rendre l'onglet à chaque lot.
+      let derniereMaj = 0;
+      const recevoir = (resultats, fait) => {
+        for (const r of resultats) cacheParMain.set(r.id, { reel: r.reel, ev: r.ev, ajustee: r.ajustee });
+        sauvegarderCache();
+        const maintenant = Date.now();
+        if (!annule && maintenant - derniereMaj > 330) {
+          derniereMaj = maintenant;
+          setEtat((e) => ({ ...e, avancement: (mains.length - manquantes.length + fait) / mains.length }));
+        }
+      };
+
+      // Repli : calcul sur le fil principal, par lots de 10 mains.
+      const calculerIci = () => {
+        let index = 0;
+        const lot = () => {
+          if (annule) return;
+          const fin = Math.min(index + 10, manquantes.length);
+          const resultats = [];
+          for (; index < fin; index++) resultats.push({ id: manquantes[index].id, ...calculerMain(manquantes[index]) });
+          recevoir(resultats, index);
+          if (index < manquantes.length) setTimeout(lot, 0);
+          else terminer();
+        };
+        lot();
+      };
+
+      try {
+        worker = new EvWorker();
+        let recu = false;
+        worker.onmessage = (e) => {
+          recu = true;
+          if (e.data.type === "lot") recevoir(e.data.resultats, e.data.fait);
+          else if (e.data.type === "fin") {
+            terminer();
+            worker.terminate();
+            worker = null;
+          }
+        };
+        worker.onerror = () => {
+          worker.terminate();
+          worker = null;
+          if (!recu) calculerIci();
+        };
+        worker.postMessage({ mains: manquantes });
+      } catch {
+        worker = null;
+        calculerIci();
+      }
+    })();
+
     return () => {
       annule = true;
+      if (worker) worker.terminate();
     };
   }, [mains]);
 
