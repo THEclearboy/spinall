@@ -1779,15 +1779,26 @@ tr:last-child td {
 .ligne-limite {
   cursor: pointer;
 }
+.ligne-limite td {
+  transition: background 0.15s;
+}
 .ligne-limite:hover td {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 .ligne-limite.total td {
   font-weight: 800;
-  border-top: 2px solid var(--t-texte);
+}
+.ligne-limite.active td {
+  background: rgba(217, 255, 90, 0.12);
 }
 .ligne-limite.active td:first-child {
-  box-shadow: inset 4px 0 0 var(--t-texte);
+  color: var(--lime);
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+.ligne-limite.active td:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
 }
 .ligne-ecart,
 .ligne-main {
