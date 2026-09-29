@@ -274,7 +274,13 @@ strong {
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
-  margin-top: auto;
+  margin-top: 4px;
+}
+.tuile-grand.positif {
+  color: var(--lime);
+}
+.tuile-grand.negatif {
+  color: var(--orange);
 }
 .tuile-grand .petit {
   font-size: 1.1rem;
@@ -1683,16 +1689,45 @@ tr:last-child td {
 }
 
 /* ---------------------------------------------------------------- analyse */
-.depot {
-  cursor: pointer;
-  min-height: 150px;
-  justify-content: space-between;
+.barre-import {
+  padding: 14px 22px;
+  gap: 8px;
   transition: background 0.15s;
 }
-.depot.survol {
+.barre-import.survol {
   background: var(--sombre-2);
   outline: 2px dashed var(--lime);
-  outline-offset: -8px;
+  outline-offset: -6px;
+}
+.barre-import-contenu {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.barre-import-texte {
+  min-width: 0;
+}
+.barre-import .pilules {
+  align-items: center;
+}
+.barre-import-details {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+}
+.barre-import-details details {
+  max-width: 100%;
+}
+.barre-import-details summary {
+  cursor: pointer;
+}
+.barre-import-details .rapport-import {
+  max-height: 140px;
+  overflow-y: auto;
+  padding-right: 8px;
 }
 .depot-grand {
   font-size: 2.6rem;

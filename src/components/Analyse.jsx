@@ -231,23 +231,21 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   const roi = stats.investi > 0 ? stats.netEuro / stats.investi : null;
   const libelleScope = limiteActive === null ? "toutes limites" : `limite ${euros(limiteActive)}`;
 
-  const tuileImport = (
+  const nbFichiers = (analyse.fichiers || []).length;
+  const dernierJour = mainsScope.reduce((max, m) => (m.date && m.date > max ? m.date : max), 0);
+  const premierJour = mainsScope.reduce((min, m) => (m.date && (min === 0 || m.date < min) ? m.date : min), 0);
+  const nbJoursJoues = stats.partiesParJour.filter((j) => j.nb > 0).length;
+
+  /* Barre d'import : zone de dépôt sur toute la largeur, rapport replié. */
+  const barreImport = (
     <Tuile
       variante="sombre"
-      span={4}
-      titre="Importer"
-      sous="historiques de mains Betclic"
-      classe={survolDepot ? "depot survol" : "depot"}
-      action={
-        <Pilule variante="lime" onClick={() => champFichier.current?.click()} titre="Choisir des fichiers">
-          +
-        </Pilule>
-      }
-      onClick={() => !importEnCours && champFichier.current?.click()}
-      style={undefined}
+      span={12}
+      classe={`barre-import${survolDepot ? " survol" : ""}`}
+      onClick={undefined}
     >
       <div
-        className="depot-zone"
+        className="barre-import-contenu"
         onDragOver={(e) => {
           e.preventDefault();
           setSurvolDepot(true);
@@ -257,19 +255,46 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         }}
         onDrop={(e) => {
           e.preventDefault();
-          e.stopPropagation();
           setSurvolDepot(false);
           importer(e.dataTransfer.files);
         }}
       >
-        <div className="depot-grand">
-          <span className="plus">+</span>
-          {importEnCours ? "Import…" : "Ajouter des mains"}
+        <div className="barre-import-texte">
+          <h3 className="tuile-titre">Historiques Betclic</h3>
+          <p className="tuile-sous">
+            {analyse.mains.length > 0
+              ? `${pluriel("main", analyse.mains.length)} · ${pluriel("partie", bilan[bilan.length - 1]?.parties || 0)} · ${pluriel("fichier", nbFichiers)}`
+              : "aucune main pour l'instant"}
+            {premierJour > 0 && dernierJour > 0 && ` · du ${new Date(premierJour).toLocaleDateString("fr-FR")} au ${new Date(dernierJour).toLocaleDateString("fr-FR")}`}
+          </p>
         </div>
-        <p className="depot-aide">
-          Glisse ici tes fichiers <strong>.txt</strong> ou <strong>.zip</strong> (client Betclic : Mon compte → Historique des mains →
-          Exporter). Un fichier déjà importé est refusé, les mains en double sont ignorées.
-        </p>
+        <div className="pilules">
+          {limites.length > 1 && (
+            <div className="segment">
+              <button className={limiteActive === null ? "actif" : ""} onClick={() => setLimite(null)}>
+                Toutes
+              </button>
+              {limites.map((l) => (
+                <button key={l} className={limiteActive === l ? "actif" : ""} onClick={() => setLimite(l)}>
+                  {euros(l)}
+                </button>
+              ))}
+            </div>
+          )}
+          {analyse.mains.length > 0 && (
+            <>
+              <Pilule variante="clair" onClick={imprimer} titre="Ouvre le dialogue d'impression : choisis « Enregistrer en PDF »">
+                {calculEvTotal.points ? "Rapport PDF" : "Rapport : calcul…"}
+              </Pilule>
+              <Pilule variante="clair" onClick={viderBase}>
+                Vider la base
+              </Pilule>
+            </>
+          )}
+          <Pilule variante="lime" onClick={() => !importEnCours && champFichier.current?.click()} titre="Fichiers .txt ou .zip exportés par le client Betclic">
+            {importEnCours ? "Import…" : "+ Ajouter des mains"}
+          </Pilule>
+        </div>
       </div>
       <input
         ref={champFichier}
@@ -277,30 +302,26 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         accept=".txt,.zip,text/plain,application/zip"
         multiple
         style={{ display: "none" }}
-        onClick={(e) => e.stopPropagation()}
         onChange={(e) => {
           importer(e.target.files);
           e.target.value = "";
         }}
       />
-      {rapport && rapport.length > 0 && (
-        <ul className="rapport-import" onClick={(e) => e.stopPropagation()}>
-          {rapport.map((ligne, i) => (
-            <li key={i}>{ligne}</li>
-          ))}
-        </ul>
-      )}
-      {analyse.mains.length > 0 && (
-        <div className="pilules" onClick={(e) => e.stopPropagation()}>
-          <Pilule variante="clair" onClick={imprimer} titre="Ouvre le dialogue d'impression : choisis « Enregistrer en PDF »">
-            {calculEvTotal.points ? "Rapport PDF" : "Rapport : calcul…"}
-          </Pilule>
-          <Pilule variante="clair" onClick={viderBase}>
-            Vider la base
-          </Pilule>
-          {(analyse.fichiers || []).length > 0 && (
-            <details className="liste-fichiers">
-              <summary className="muet">{pluriel("fichier importé", analyse.fichiers.length)}</summary>
+      {(rapport?.length > 0 || nbFichiers > 0) && (
+        <div className="barre-import-details">
+          {rapport && rapport.length > 0 && (
+            <details open>
+              <summary className="muet">Dernier import : {pluriel("ligne", rapport.length)}</summary>
+              <ul className="rapport-import">
+                {rapport.map((ligne, i) => (
+                  <li key={i}>{ligne}</li>
+                ))}
+              </ul>
+            </details>
+          )}
+          {nbFichiers > 0 && (
+            <details>
+              <summary className="muet">{pluriel("fichier importé", nbFichiers)}</summary>
               <ul className="rapport-import">
                 {[...analyse.fichiers].reverse().map((f) => (
                   <li key={f.empreinte}>
@@ -325,8 +346,8 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
     return (
       <section className="analyse">
         <Bento>
-          {tuileImport}
-          <Tuile variante="blanc" span={8} titre="Chargement">
+          {barreImport}
+          <Tuile variante="blanc" span={12} titre="Chargement">
             <p className="tuile-grand" style={{ fontSize: "1.6rem" }}>
               Chargement de la base de mains…
             </p>
@@ -339,14 +360,15 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
     return (
       <section className="analyse">
         <Bento>
-          {tuileImport}
-          <Tuile variante="lime" span={8} titre="Aucune main pour l'instant" sous="tout commence par un import">
+          {barreImport}
+          <Tuile variante="lime" span={12} titre="Aucune main pour l'instant" sous="tout commence par un import">
             <p className="tuile-grand" style={{ fontSize: "2rem" }}>
-              Exporte ton historique depuis le client Betclic, puis dépose les fichiers ici.
+              Exporte ton historique depuis le client Betclic (Mon compte → Historique des mains → Exporter), puis dépose les
+              fichiers ici.
             </p>
             <p className="tuile-legende">
-              Tu obtiendras : gains par limite, cEV, bankroll, respect des ranges, heures jouées, parties par jour et le détail de chaque
-              main.
+              Tu obtiendras : parties et cEV, gains par limite, bankroll, respect des ranges, heures jouées, parties par jour et le
+              détail de chaque main.
             </p>
           </Tuile>
         </Bento>
@@ -356,199 +378,87 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   return (
     <section className="analyse">
       <Bento>
-        {tuileImport}
+        {barreImport}
 
-        <Tuile
-          variante="lime"
-          span={4}
-          titre="Gain net"
-          sous={libelleScope}
-          action={roi !== null && <Pilule variante="sombre" classe="delta">ROI {signe(roi)}{pourcent(roi)}</Pilule>}
-        >
-          <div className="tuile-grand">
-            <span className="fleche">{stats.netEuro >= 0 ? "↑" : "↓"}</span>
-            {signe(stats.netEuro)}
-            {euros(stats.netEuro)}
-          </div>
+        {/* ---- Niveau 1 : l'essentiel — volume et cEV, puis argent ---- */}
+        <Tuile variante="lime" span={3} titre="Parties" sous={libelleScope}>
+          <div className="tuile-grand">{stats.parties.length}</div>
           <p className="tuile-pied">
-            {euros(stats.investi)} de buy-ins sur {pluriel("partie", stats.parties.length)}
+            {pluriel("main", stats.nbMains)} · {pluriel("jour de jeu", nbJoursJoues)}
           </p>
         </Tuile>
 
-        <Tuile variante="sombre" span={4} titre="Par limite" sous="gain net et cEV par buy-in — clique pour filtrer">
-          <div className="defilant">
-          <table className="tableau-limites">
-            <thead>
-              <tr>
-                <th>Limite</th>
-                <th>Parties</th>
-                <th>Gain</th>
-                <th>ROI</th>
-                <th title="Jetons gagnés par partie, chance neutralisée">cEV</th>
-              </tr>
-            </thead>
-            <tbody>
-              {bilan.map((l) => (
-                <tr
-                  key={l.limite === null ? "total" : l.limite}
-                  className={`ligne-limite${l.limite === null ? " total" : ""}${(limiteActive ?? null) === l.limite ? " active" : ""}`}
-                  onClick={() => setLimite(l.limite)}
-                >
-                  <td>{l.limite === null ? "Toutes" : euros(l.limite)}</td>
-                  <td>{l.parties}</td>
-                  <td className={l.netEuro >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
-                    {signe(l.netEuro)}
-                    {euros(l.netEuro)}
-                  </td>
-                  <td>{l.roi === null ? "—" : `${signe(l.roi)}${pourcent(l.roi)}`}</td>
-                  <td className={l.cEV === null ? "" : l.cEV >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
-                    {l.cEV === null ? "…" : `${signe(l.cEV)}${unDecimal(l.cEV)}`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          </div>
-        </Tuile>
-
-        <Tuile
-          variante="blanc"
-          span={6}
-          titre="Bankroll"
-          sous={`net cumulé, partie après partie — ${libelleScope}`}
-          valeur={`${signe(stats.netEuro)}${euros(stats.netEuro)}`}
-        >
-          {stats.courbe.length >= 2 ? (
-            <Courbe
-              series={[{ cle: "net", valeurs: stats.courbe.map((p) => p.cumul) }]}
-              formatY={(v) => euros(v)}
-              infobulle={(i) => (
-                <>
-                  <div>{dateHeure(stats.courbe[i].date)}</div>
-                  <div>
-                    {stats.courbe[i].partie.multiplicateur ? `x${stats.courbe[i].partie.multiplicateur} — ` : ""}
-                    {stats.courbe[i].partie.resultatConnu ? ordinal(stats.courbe[i].partie.place) : "résultat inconnu"} · partie{" "}
-                    {signe(stats.courbe[i].partie.netEuro)}
-                    {euros(stats.courbe[i].partie.netEuro)}
-                  </div>
-                  <div>
-                    Cumul : <strong>{euros(stats.courbe[i].cumul)}</strong>
-                  </div>
-                </>
-              )}
-            />
-          ) : (
-            <p className="tuile-legende">Encore une partie et la courbe apparaît.</p>
-          )}
-          {stats.parties.some((p) => !p.resultatConnu) && (
-            <p className="tuile-legende">
-              ⚠ {stats.parties.filter((p) => !p.resultatConnu).length} partie(s) sans ligne de résultat dans l'export (comptées comme
-              buy-in perdu).
-            </p>
-          )}
-        </Tuile>
-
-        <Tuile variante="vert" span={3} titre="Respect des ranges" sous="par situation, pré-flop">
-          <div className="anneaux-bloc">
-            <Anneaux series={conformiteParFamille} centre={stats.tauxConformite === null ? "—" : `${Math.round(100 * stats.tauxConformite)}%`} />
-            <ListeValeurs lignes={conformiteParFamille.map((s) => ({ cle: s.label, label: s.label, couleur: s.couleur, valeur: s.texte }))} />
-          </div>
-        </Tuile>
-
-        <Tuile variante="jaune" span={3} titre="Ranges — global" sous={`${stats.spots.length} spots couverts`}>
-          <Jauge valeur={stats.tauxConformite} centre={stats.tauxConformite === null ? "—" : `${Math.round(100 * stats.tauxConformite)}%`} />
-          <ListeValeurs
-            lignes={[
-              { cle: "c", label: "Conformes", valeur: stats.spots.length - stats.ecarts.length },
-              { cle: "e", label: "Écarts", valeur: stats.ecarts.length },
-            ]}
-          />
-        </Tuile>
-
-        <Tuile
-          variante="orange"
-          span={6}
-          titre="Parties par jour"
-          sous={periodeJours ? `${periodeJours} derniers jours` : "depuis le début"}
-          valeur={`${nbPartiesPeriode}`}
-          action={
-            <div className="pilules">
-              {[7, 30, 0].map((p) => (
-                <Pilule key={p} variante={periodeJours === p ? "sombre" : "clair"} onClick={() => setPeriodeJours(p)}>
-                  {p ? `${p} j` : "Tout"}
-                </Pilule>
-              ))}
-            </div>
-          }
-        >
-          <BarresJours jours={partiesRecentes} unite="partie" nbMax={periodeJours || 60} />
-        </Tuile>
-
-        <Tuile
-          variante="blanc"
-          span={6}
-          titre="Heures jouées"
-          sous="calculées d'après tes mains — clique sur un jour pour corriger"
-          valeur={formatHeures(totalHeuresMois(heures, cleMois(moisAffiche)))}
-        >
-          <CalendrierHeures
-            heures={heures}
-            mois={moisAffiche}
-            onMois={(delta) => setMoisCalendrier(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() + delta, 1))}
-            onEditer={(cle, valeur) =>
-              setCorrectionsHeures((c) => {
-                const copie = { ...c };
-                if (valeur === null) delete copie[cle];
-                else copie[cle] = valeur;
-                return copie;
-              })
-            }
-          />
-          <p className="tuile-legende">Total sur la période : {formatHeures(totalHeures)}.</p>
-        </Tuile>
-
-        <Tuile variante="lavande" span={3} titre="VPIP" sous="mains jouées volontairement">
-          <div className="anneau-bloc">
-            <Anneau valeur={stats.vpip || 0} couleur="#46468c" taille={120} epaisseur={12} centre={pourcent(stats.vpip)} />
-          </div>
-        </Tuile>
-        <Tuile variante="lavande" span={3} titre="PFR" sous="relances pré-flop">
-          <div className="anneau-bloc">
-            <Anneau valeur={stats.pfr || 0} couleur="#46468c" taille={120} epaisseur={12} centre={pourcent(stats.pfr)} />
-          </div>
-        </Tuile>
         <Tuile
           variante="blanc"
           span={3}
           titre="cEV / partie"
           sous="jetons gagnés par partie, chance neutralisée"
-          action={<Pilule variante="clair" titre="Jetons gagnés en théorie : tapis payés avant la river comptés à leur équité">?</Pilule>}
+          action={<Pilule variante="clair" titre="Jetons gagnés en théorie : les tapis payés avant la river sont comptés à leur équité (pot × équité)">?</Pilule>}
         >
-          <div className="tuile-grand orange">
+          <div className={`tuile-grand ${cEV !== null && cEV < 0 ? "negatif" : "orange"}`}>
             {cEV === null ? "…" : `${signe(cEV)}${unDecimal(cEV)}`}
           </div>
-          <p className="tuile-pied">{reelParPartie === null ? "calcul en cours" : `réel : ${signe(reelParPartie)}${unDecimal(reelParPartie)} jetons / partie`}</p>
+          <p className="tuile-pied">
+            {reelParPartie === null ? "calcul en cours" : `réel : ${signe(reelParPartie)}${unDecimal(reelParPartie)} jetons / partie`}
+          </p>
         </Tuile>
-        <Tuile variante="sombre" span={3} titre="Places" sous="1ᵉʳ / 2ᵉ / 3ᵉ">
-          <Segments
-            parts={[
-              { label: "1ᵉʳ", valeur: stats.places[1], couleur: "var(--lime)" },
-              { label: "2ᵉ", valeur: stats.places[2], couleur: "var(--lavande)" },
-              { label: "3ᵉ", valeur: stats.places[3], couleur: "var(--orange)" },
-            ]}
-          />
-          <div className="segments-legende">
-            <span style={{ "--c": "var(--lime)" }}>1ᵉʳ</span>
-            <span style={{ "--c": "var(--lavande)" }}>2ᵉ</span>
-            <span style={{ "--c": "var(--orange)" }}>3ᵉ</span>
+
+        <Tuile
+          variante="sombre"
+          span={3}
+          titre="Gain net"
+          sous={libelleScope}
+          action={roi !== null && <Pilule variante={roi >= 0 ? "lime" : "orange"} classe="delta">ROI {signe(roi)}{pourcent(roi)}</Pilule>}
+        >
+          <div className={`tuile-grand ${stats.netEuro >= 0 ? "positif" : "negatif"}`}>
+            {signe(stats.netEuro)}
+            {euros(stats.netEuro)}
+          </div>
+          <p className="tuile-pied">{euros(stats.investi)} de buy-ins investis</p>
+        </Tuile>
+
+        <Tuile variante="sombre" span={3} titre="Par limite" sous="clique sur une ligne pour filtrer">
+          <div className="defilant">
+            <table className="tableau-limites">
+              <thead>
+                <tr>
+                  <th>Limite</th>
+                  <th>Parties</th>
+                  <th title="Jetons gagnés par partie, chance neutralisée">cEV</th>
+                  <th>Gain</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bilan
+                  .filter((l) => limites.length > 1 || l.limite !== null)
+                  .map((l) => (
+                    <tr
+                      key={l.limite === null ? "total" : l.limite}
+                      className={`ligne-limite${l.limite === null ? " total" : ""}${(limiteActive ?? null) === l.limite ? " active" : ""}`}
+                      onClick={() => setLimite(l.limite)}
+                    >
+                      <td>{l.limite === null ? "Toutes" : euros(l.limite)}</td>
+                      <td>{l.parties}</td>
+                      <td className={l.cEV === null ? "" : l.cEV >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
+                        {l.cEV === null ? "…" : `${signe(l.cEV)}${unDecimal(l.cEV)}`}
+                      </td>
+                      <td className={l.netEuro >= 0 ? "bonne-reponse" : "mauvaise-reponse"}>
+                        {signe(l.netEuro)}
+                        {euros(l.netEuro)}
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           </div>
         </Tuile>
 
+        {/* ---- Niveau 2 : tendances ---- */}
         <Tuile
           variante="blanc"
           span={6}
           titre="Réel vs attendu"
-          sous="jetons gagnés main après main — la différence, c'est la variance"
+          sous="jetons gagnés main après main — l'écart, c'est la variance"
           action={
             <div className="legende-graphe">
               <span>
@@ -592,12 +502,59 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           )}
         </Tuile>
 
-        <Tuile variante="sombre" span={3} titre="Showdowns" sous="gagnés / vus">
-          <div className="tuile-grand">
-            {stats.showdownsGagnes}
-            <span className="petit">/ {stats.showdownsVus}</span>
+        <Tuile
+          variante="blanc"
+          span={6}
+          titre="Bankroll"
+          sous={`net cumulé, partie après partie — ${libelleScope}`}
+          valeur={`${signe(stats.netEuro)}${euros(stats.netEuro)}`}
+        >
+          {stats.courbe.length >= 2 ? (
+            <Courbe
+              series={[{ cle: "net", valeurs: stats.courbe.map((p) => p.cumul) }]}
+              formatY={(v) => euros(v)}
+              infobulle={(i) => (
+                <>
+                  <div>{dateHeure(stats.courbe[i].date)}</div>
+                  <div>
+                    {stats.courbe[i].partie.multiplicateur ? `x${stats.courbe[i].partie.multiplicateur} — ` : ""}
+                    {stats.courbe[i].partie.resultatConnu ? ordinal(stats.courbe[i].partie.place) : "résultat inconnu"} · partie{" "}
+                    {signe(stats.courbe[i].partie.netEuro)}
+                    {euros(stats.courbe[i].partie.netEuro)}
+                  </div>
+                  <div>
+                    Cumul : <strong>{euros(stats.courbe[i].cumul)}</strong>
+                  </div>
+                </>
+              )}
+            />
+          ) : (
+            <p className="tuile-legende">Encore une partie et la courbe apparaît.</p>
+          )}
+          {stats.parties.some((p) => !p.resultatConnu) && (
+            <p className="tuile-legende">
+              ⚠ {stats.parties.filter((p) => !p.resultatConnu).length} partie(s) sans ligne de résultat dans l'export (comptées comme
+              buy-in perdu).
+            </p>
+          )}
+        </Tuile>
+
+        {/* ---- Niveau 3 : qualité du jeu ---- */}
+        <Tuile variante="vert" span={3} titre="Respect des ranges" sous="par situation, pré-flop">
+          <div className="anneaux-bloc">
+            <Anneaux series={conformiteParFamille} centre={stats.tauxConformite === null ? "—" : `${Math.round(100 * stats.tauxConformite)}%`} />
+            <ListeValeurs lignes={conformiteParFamille.map((s) => ({ cle: s.label, label: s.label, couleur: s.couleur, valeur: s.texte }))} />
           </div>
-          <p className="tuile-pied">{pluriel("main", stats.nbMains)} au total, {stats.mainsAvecHero} avec ta position connue</p>
+        </Tuile>
+
+        <Tuile variante="jaune" span={3} titre="Ranges — global" sous={`${stats.spots.length} spots couverts`}>
+          <Jauge valeur={stats.tauxConformite} centre={stats.tauxConformite === null ? "—" : `${Math.round(100 * stats.tauxConformite)}%`} />
+          <ListeValeurs
+            lignes={[
+              { cle: "c", label: "Conformes", valeur: stats.spots.length - stats.ecarts.length },
+              { cle: "e", label: "Écarts", valeur: stats.ecarts.length },
+            ]}
+          />
         </Tuile>
 
         <Tuile variante="vert" span={3} titre="Ranges — évolution" sous="moyenne glissante sur 50 spots">
@@ -624,6 +581,95 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           ) : (
             <p className="tuile-legende">Pas encore assez de spots pour tracer l'évolution.</p>
           )}
+        </Tuile>
+
+        <Tuile variante="sombre" span={3} titre="Places" sous="1ᵉʳ / 2ᵉ / 3ᵉ">
+          <Segments
+            parts={[
+              { label: "1ᵉʳ", valeur: stats.places[1], couleur: "var(--lime)" },
+              { label: "2ᵉ", valeur: stats.places[2], couleur: "var(--lavande)" },
+              { label: "3ᵉ", valeur: stats.places[3], couleur: "var(--orange)" },
+            ]}
+          />
+          <div className="segments-legende">
+            <span style={{ "--c": "var(--lime)" }}>1ᵉʳ</span>
+            <span style={{ "--c": "var(--lavande)" }}>2ᵉ</span>
+            <span style={{ "--c": "var(--orange)" }}>3ᵉ</span>
+          </div>
+          <ListeValeurs
+            lignes={[
+              { cle: "v", label: "Victoires", valeur: stats.partiesJouees.length ? pourcent(stats.places[1] / stats.partiesJouees.length) : "—" },
+              { cle: "s", label: "Showdowns gagnés", valeur: `${stats.showdownsGagnes} / ${stats.showdownsVus}` },
+            ]}
+          />
+        </Tuile>
+
+        {/* ---- Niveau 4 : volume ---- */}
+        <Tuile
+          variante="orange"
+          span={6}
+          titre="Parties par jour"
+          sous={periodeJours ? `${periodeJours} derniers jours` : "depuis le début"}
+          valeur={`${nbPartiesPeriode}`}
+          action={
+            <div className="pilules">
+              {[7, 30, 0].map((p) => (
+                <Pilule key={p} variante={periodeJours === p ? "sombre" : "clair"} onClick={() => setPeriodeJours(p)}>
+                  {p ? `${p} j` : "Tout"}
+                </Pilule>
+              ))}
+            </div>
+          }
+        >
+          <BarresJours jours={partiesRecentes} unite="partie" nbMax={periodeJours || 60} />
+        </Tuile>
+
+        <Tuile
+          variante="blanc"
+          span={6}
+          titre="Heures jouées"
+          sous="calculées d'après tes mains — clique sur un jour pour corriger"
+          valeur={formatHeures(totalHeuresMois(heures, cleMois(moisAffiche)))}
+        >
+          <CalendrierHeures
+            heures={heures}
+            mois={moisAffiche}
+            onMois={(delta) => setMoisCalendrier(new Date(moisAffiche.getFullYear(), moisAffiche.getMonth() + delta, 1))}
+            onEditer={(cle, valeur) =>
+              setCorrectionsHeures((c) => {
+                const copie = { ...c };
+                if (valeur === null) delete copie[cle];
+                else copie[cle] = valeur;
+                return copie;
+              })
+            }
+          />
+          <p className="tuile-legende">Total sur la période : {formatHeures(totalHeures)}.</p>
+        </Tuile>
+
+        {/* ---- Niveau 5 : style de jeu ---- */}
+        <Tuile variante="lavande" span={3} titre="VPIP" sous="mains jouées volontairement">
+          <div className="anneau-bloc">
+            <Anneau valeur={stats.vpip || 0} couleur="#46468c" taille={120} epaisseur={12} centre={pourcent(stats.vpip)} />
+          </div>
+        </Tuile>
+        <Tuile variante="lavande" span={3} titre="PFR" sous="relances pré-flop">
+          <div className="anneau-bloc">
+            <Anneau valeur={stats.pfr || 0} couleur="#46468c" taille={120} epaisseur={12} centre={pourcent(stats.pfr)} />
+          </div>
+        </Tuile>
+        <Tuile variante="sombre" span={3} titre="Mains" sous="dans la sélection">
+          <div className="tuile-grand">{stats.nbMains}</div>
+          <p className="tuile-pied">{stats.mainsAvecHero} avec ta position connue</p>
+        </Tuile>
+        <Tuile variante="sombre" span={3} titre="Par partie" sous="moyennes">
+          <ListeValeurs
+            lignes={[
+              { cle: "m", label: "Mains par partie", valeur: stats.parties.length ? unDecimal(stats.nbMains / stats.parties.length) : "—" },
+              { cle: "h", label: "Durée moyenne", valeur: stats.parties.length ? formatHeures(totalHeures / stats.parties.length) : "—" },
+              { cle: "p", label: "Parties par jour de jeu", valeur: nbJoursJoues ? unDecimal(stats.parties.length / nbJoursJoues) : "—" },
+            ]}
+          />
         </Tuile>
       </Bento>
 
