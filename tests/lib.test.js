@@ -147,6 +147,12 @@ test("heures jouées : sessions et corrections manuelles", async () => {
   assert.ok(heures.get(cle).heures > 0);
   const corrige = heuresParJour(mains, { [cle]: 2.5 });
   assert.equal(corrige.get(cle).heures, 2.5);
+  // Une session qui passe minuit est répartie entre les deux jours.
+  const soir = new Date(2026, 8, 28, 23, 30, 0, 0).getTime();
+  const nuit = [0, 10, 20, 30, 40, 50, 59].map((min, i) => ({ id: `n${i}`, date: soir + min * 60_000 }));
+  const coupe = heuresParJour(nuit);
+  assert.equal(coupe.get("2026-09-28").heures, 0.5);
+  assert.equal(coupe.get("2026-09-29").heures, 0.5);
   assert.equal(corrige.get(cle).manuel, 2.5);
   assert.equal(formatHeures(1.5), "1 h 30");
   assert.equal(formatHeures(0.25), "15 min");

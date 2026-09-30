@@ -38,9 +38,17 @@ export function sessions(mains) {
 export function heuresParJour(mains, corrections = {}) {
   const parJour = new Map();
   for (const s of sessions(mains)) {
-    const cle = cleJour(s.debut);
-    const duree = (s.fin - s.debut + DUREE_DERNIERE_MAIN_MS) / 3_600_000;
-    parJour.set(cle, (parJour.get(cle) || 0) + duree);
+    // Une session qui passe minuit est répartie entre les deux jours.
+    let debut = s.debut;
+    const fin = s.fin + DUREE_DERNIERE_MAIN_MS;
+    while (debut < fin) {
+      const minuit = new Date(debut);
+      minuit.setHours(24, 0, 0, 0);
+      const borne = Math.min(fin, minuit.getTime());
+      const cle = cleJour(debut);
+      parJour.set(cle, (parJour.get(cle) || 0) + (borne - debut) / 3_600_000);
+      debut = borne;
+    }
   }
   const resultat = new Map();
   const cles = new Set([...parJour.keys(), ...Object.keys(corrections)]);

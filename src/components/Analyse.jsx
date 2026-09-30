@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Bento, Tuile, Pilule } from "./ui/Tuile.jsx";
 import { Chargement, Tourne } from "./ui/Chargement.jsx";
+import { PartageImage } from "./PartageImage.jsx";
 import { CarteInline } from "./Carte.jsx";
 import { GrilleMains, Legende } from "./Grille.jsx";
 import { DetailMain } from "./DetailMain.jsx";
@@ -45,6 +46,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   const [periodeJours, setPeriodeJours] = useState(30); // 7, 30 ou 0 (tout)
   const [moisCalendrier, setMoisCalendrier] = useState(null);
   const [correctionsHeures, setCorrectionsHeures] = useState(() => lireLocal("heures", {}));
+  const [partageOuvert, setPartageOuvert] = useState(false);
   const champFichier = useRef(null);
 
   useEffect(() => {
@@ -303,6 +305,9 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           )}
           {analyse.mains.length > 0 && (
             <>
+              <Pilule variante="blanc" onClick={() => setPartageOuvert(true)} titre="Générer une image du bilan à envoyer">
+                Partager
+              </Pilule>
               <Pilule variante="clair" onClick={imprimer} titre="Ouvre le dialogue d'impression : choisis « Enregistrer en PDF »">
                 {calculEvTotal.points ? "Rapport PDF" : <><Tourne /> Rapport</>}
               </Pilule>
@@ -397,6 +402,16 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
 
   return (
     <section className="analyse">
+      {partageOuvert && (
+        <PartageImage
+          mains={mainsScope}
+          charts={charts}
+          parMain={calculEvTotal.parMain}
+          correctionsHeures={correctionsHeures}
+          limiteActive={limiteActive}
+          onFermer={() => setPartageOuvert(false)}
+        />
+      )}
       <Bento>
         {barreImport}
 
