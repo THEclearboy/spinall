@@ -1,4 +1,5 @@
-// Dessine le « bilan en image » (1080 × 1440, affiche dans l'identité bento) sur un canvas.
+// Dessine le « bilan en image » (1080 × 1440, affiche dans l'identité bento) sur un canvas :
+// tout l'historique, sauf les heures et la bankroll qui portent sur les 3 derniers jours.
 import { euros, pourcent, pluriel } from "./format.js";
 import { formatHeures } from "./heures.js";
 
@@ -211,7 +212,7 @@ export function dessinerBilan(ctx, b) {
   libelle(ctx, "cEV / partie", xC, y);
   if (b.cEV === null) {
     texte(ctx, b.calculEnCours ? "calcul…" : "—", xC - 4, y + 176, { taille: 96, poids: 800, couleur: C.muet });
-    texte(ctx, b.calculEnCours ? "l'équité est encore en cours de calcul" : "aucune partie sur la période", xC, y + 220, { taille: 19, poids: 600, couleur: C.muet });
+    texte(ctx, b.calculEnCours ? "l'équité est encore en cours de calcul" : "aucune partie", xC, y + 220, { taille: 19, poids: 600, couleur: C.muet });
   } else {
     texteAjuste(ctx, `${signe(b.cEV)}${unDecimal(b.cEV)}`, xC - 6, y + 176, LARGEUR - M - xC + 10, { taille: 190, poids: 800, couleur: C.blanc });
     texte(ctx, `jetons / partie, chance neutralisée · réel ${signe(b.reelParPartie)}${unDecimal(b.reelParPartie)}`, xC, y + 220, { taille: 19, poids: 600, couleur: C.muet });
@@ -248,7 +249,7 @@ export function dessinerBilan(ctx, b) {
     texte(ctx, `${signe(l.netEuro)}${euros(l.netEuro)}`, cols[3], yl, { taille: 21, poids: 800, couleur: l.netEuro >= 0 ? C.lime : C.orange, align: "right" });
     yl += 40;
   });
-  if (!lignes.length) texte(ctx, "aucune partie sur la période", xT + 28, yl, { taille: 19, poids: 600, couleur: C.muet });
+  if (!lignes.length) texte(ctx, "aucune partie", xT + 28, yl, { taille: 19, poids: 600, couleur: C.muet });
   y += hT + 4;
 
   // ---- carte blanche : réel vs attendu
@@ -274,7 +275,7 @@ export function dessinerBilan(ctx, b) {
     const ecart = dr - de;
     texte(ctx, `${ecart >= 0 ? "chance" : "malchance"} ${signe(ecart)}${entier(ecart)}`, LARGEUR - M - 30, y + hR - 24, { taille: 19, poids: 700, couleur: C.muetSombre, align: "right" });
   } else {
-    texte(ctx, b.calculEnCours ? "Calcul de l'équité en cours…" : "Pas assez de parties sur la période.", M + 30, y + hR / 2 + 30, { taille: 24, poids: 700, couleur: C.muetSombre });
+    texte(ctx, b.calculEnCours ? "Calcul de l'équité en cours…" : "Pas assez de parties.", M + 30, y + hR / 2 + 30, { taille: 24, poids: 700, couleur: C.muetSombre });
   }
   y += hR + 20;
 
@@ -284,13 +285,13 @@ export function dessinerBilan(ctx, b) {
   const lB = (L - G) * (7 / 12);
   arrondi(ctx, M, y, lB, hB, 32, C.sombre);
   libelle(ctx, "Bankroll", M + 30, y + 44);
-  texte(ctx, "net cumulé, partie après partie", M + 30, y + 72, { taille: 18, poids: 600, couleur: C.muet });
+  texte(ctx, "les 3 derniers jours, partie après partie", M + 30, y + 72, { taille: 18, poids: 600, couleur: C.muet });
   if (b.pointsBankroll.length >= 2) {
     tracerSeries(ctx, [{ valeurs: b.pointsBankroll, couleur: C.lime, aire: "rgba(217,255,90,0.35)" }], { x: M + 30, y: y + 104, l: lB - 60 - 76, h: hB - 104 - 70 }, false, (v) => `${entier(v)} €`);
-    texte(ctx, `${signe(b.netEuro)}${euros(b.netEuro)}`, M + 30, y + hB - 26, { taille: 30, poids: 800, couleur: positif ? C.lime : C.orange });
-    texte(ctx, `sur ${pluriel("partie", b.parties)}`, M + 30 + 14 + ctx.measureText(`${signe(b.netEuro)}${euros(b.netEuro)}`).width, y + hB - 26, { taille: 18, poids: 600, couleur: C.muet });
+    texte(ctx, `${signe(b.netEuro3)}${euros(b.netEuro3)}`, M + 30, y + hB - 26, { taille: 30, poids: 800, couleur: b.netEuro3 >= 0 ? C.lime : C.orange });
+    texte(ctx, `sur ${pluriel("partie", b.parties3)}`, M + 30 + 14 + ctx.measureText(`${signe(b.netEuro3)}${euros(b.netEuro3)}`).width, y + hB - 26, { taille: 18, poids: 600, couleur: C.muet });
   } else {
-    texte(ctx, "Pas assez de parties sur la période.", M + 30, y + hB / 2 + 20, { taille: 22, poids: 700, couleur: C.muet });
+    texte(ctx, "Pas assez de parties sur 3 jours.", M + 30, y + hB / 2 + 20, { taille: 22, poids: 700, couleur: C.muet });
   }
 
   const xH = M + lB + G;

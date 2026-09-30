@@ -8,46 +8,12 @@ import { heuresParJour, cleJour } from "../lib/heures.js";
 import { euros } from "../lib/format.js";
 import { dessinerBilan, LARGEUR, HAUTEUR } from "../lib/bilan-image.js";
 
-const PERIODES = [
-  { id: "jour", nom: "Aujourd'hui" },
-  { id: "hier", nom: "Hier" },
-  { id: "7", nom: "7 jours" },
-  { id: "30", nom: "30 jours" },
-  { id: "tout", nom: "Tout" },
-];
-
-function debutPeriode(id) {
+/** Minuit local, il y a `recul` jours. */
+function debutJour(recul) {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
-  if (id === "jour") return [d.getTime(), Infinity];
-  if (id === "hier") {
-    const fin = d.getTime();
-    d.setDate(d.getDate() - 1);
-    return [d.getTime(), fin];
-  }
-  if (id === "7") {
-    d.setDate(d.getDate() - 6);
-    return [d.getTime(), Infinity];
-  }
-  if (id === "30") {
-    d.setDate(d.getDate() - 29);
-    return [d.getTime(), Infinity];
-  }
-  return [0, Infinity];
-}
-
-function titrePeriode(id) {
-  const auj = new Date();
-  const jour = (d) => d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-  if (id === "jour") return `Bilan du ${jour(auj)}`;
-  if (id === "hier") {
-    const h = new Date(auj);
-    h.setDate(h.getDate() - 1);
-    return `Bilan du ${jour(h)}`;
-  }
-  if (id === "7") return "Bilan des 7 derniers jours";
-  if (id === "30") return "Bilan des 30 derniers jours";
-  return "Bilan depuis le début";
+  d.setDate(d.getDate() - recul);
+  return d.getTime();
 }
 
 /**
@@ -55,35 +21,34 @@ function titrePeriode(id) {
  * canvas et propose téléchargement, copie et partage (Web Share).
  */
 export function PartageImage({ mains, charts, parMain, correctionsHeures, limiteActive, onFermer }) {
-  const [periode, setPeriode] = useState("jour");
   const [message, setMessage] = useState(null);
   const [apercu, setApercu] = useState(null);
   const canvasRef = useRef(null);
 
   const bilan = useMemo(() => {
-    const [debut, fin] = debutPeriode(periode);
-    const selection = mains.filter((m) => m.date && m.date >= debut && m.date < fin);
-    const stats = calculerStats(selection, charts);
-    const ev = parMain ? cumulerEv(selection, parMain) : null;
-    const complet = ev && selection.every((m) => parMain.has(m.id));
-    // Heures des 3 derniers jours, indépendantes de la période choisie.
+    // Tout l'historique pour les parties, le cEV, le gain et la variance ;
+    // les 3 derniers jours pour les heures et la bankroll.
+    const stats = calculerStats(mains, charts);
+    const ev = parMain ? cumulerEv(mains, parMain) : null;
+    const complet = !!ev;
+    const depuis = debutJour(2);
+    const recentes = mains.filter((m) => m.date && m.date >= depuis);
+    const stats3 = calculerStats(recentes, charts);
     const heuresToutes = heuresParJour(mains, correctionsHeures);
     const heures3 = [2, 1, 0].map((recul) => {
-      const d = new Date();
-      d.setHours(12, 0, 0, 0);
-      d.setDate(d.getDate() - recul);
-      const cle = cleJour(d.getTime());
+      const d = new Date(debutJour(recul) + 12 * 3_600_000);
       return {
         libelle: recul === 0 ? "auj." : recul === 1 ? "hier" : d.toLocaleDateString("fr-FR", { weekday: "short" }),
-        heures: heuresToutes.get(cle)?.heures || 0,
+        heures: heuresToutes.get(cleJour(d.getTime()))?.heures || 0,
       };
     });
-    const limites = bilanParLimite(selection, complet ? parMain : null).filter((l, _, t) => t.length > 2 || l.limite !== null);
+    const limites = bilanParLimite(mains, complet ? parMain : null).filter((l, _, t) => t.length > 2 || l.limite !== null);
     const nbParties = stats.parties.length;
+    const auj = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
     return {
-      titre: titrePeriode(periode),
+      titre: `Bilan du ${auj}`,
       sousTitre: limiteActive === null ? "toutes limites" : `limite ${euros(limiteActive)}`,
-      sousParties: periode === "tout" ? "depuis le début" : "sur la période",
+      sousParties: "depuis le début",
       parties: nbParties,
       nbMains: stats.nbMains,
       joursJoues: stats.partiesParJour.filter((j) => j.nb > 0).length,
@@ -97,14 +62,16 @@ export function PartageImage({ mains, charts, parMain, correctionsHeures, limite
       tauxConformite: stats.tauxConformite,
       nbSpots: stats.spots.length,
       heures3,
-      pointsBankroll: stats.courbe.map((p) => p.cumul),
+      pointsBankroll: stats3.courbe.map((p) => p.cumul),
+      netEuro3: stats3.netEuro,
+      parties3: stats3.parties.length,
       pointsReel: complet ? ev.points.map((p) => p.reel) : [],
       pointsEv: complet ? ev.points.map((p) => p.ev) : [],
       limites,
       calculEnCours: !complet,
       dateGeneration: `généré le ${new Date().toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`,
     };
-  }, [mains, charts, parMain, correctionsHeures, limiteActive, periode]);
+  }, [mains, charts, parMain, correctionsHeures, limiteActive]);
 
   useEffect(() => {
     let annule = false;
@@ -175,19 +142,12 @@ export function PartageImage({ mains, charts, parMain, correctionsHeures, limite
         <header className="fenetre-entete">
           <div>
             <h3 className="tuile-titre">Partager en image</h3>
-            <p className="tuile-sous">le bilan de la période, prêt à envoyer</p>
+            <p className="tuile-sous">tout l'historique, plus les heures et la bankroll des 3 derniers jours</p>
           </div>
           <button className="pilule pilule--clair sur-sombre" onClick={onFermer} type="button">
             Fermer
           </button>
         </header>
-        <div className="segment">
-          {PERIODES.map((p) => (
-            <button key={p.id} className={periode === p.id ? "actif" : ""} onClick={() => setPeriode(p.id)} type="button">
-              {p.nom}
-            </button>
-          ))}
-        </div>
         <div className="fenetre-apercu">
           {apercu ? <img src={apercu} alt="Aperçu du bilan" /> : <Tourne />}
           <canvas ref={canvasRef} style={{ display: "none" }} />
