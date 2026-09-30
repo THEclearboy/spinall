@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cheminLisse, aireSousCourbe, indexSousSouris } from "./chemins.js";
+import { useLargeur } from "./useLargeur.js";
 
 /**
  * Courbe lissée avec points (style « Analytics » sur carte blanche).
@@ -9,9 +10,11 @@ import { cheminLisse, aireSousCourbe, indexSousSouris } from "./chemins.js";
  */
 export function Courbe({ series, etiquettesX, formatY = (v) => String(v), infobulle, zero = true, aire = true, hauteur = 210, largeur = 640, min: minForce, max: maxForce, idSuffixe = "" }) {
   const [survol, setSurvol] = useState(null);
+  const [ref, mesuree] = useLargeur();
   const n = series[0]?.valeurs.length || 0;
   if (n < 2) return null;
-  const L = largeur;
+  // Le viewBox suit la largeur réelle : les graduations restent à leur taille.
+  const L = mesuree ? Math.max(240, mesuree) : largeur;
   const H = hauteur;
   const m = { g: 48, d: 18, h: 18, b: etiquettesX ? 28 : 18 };
   const toutes = series.flatMap((s) => s.valeurs);
@@ -23,7 +26,7 @@ export function Courbe({ series, etiquettesX, formatY = (v) => String(v), infobu
   const montrerPoints = n <= 40;
   const pasEtiquettes = etiquettesX ? Math.max(1, Math.ceil(n / 6)) : 1;
   return (
-    <div className="courbe" onMouseLeave={() => setSurvol(null)}>
+    <div className="courbe" ref={ref} onMouseLeave={() => setSurvol(null)}>
       <svg viewBox={`0 0 ${L} ${H}`} onMouseMove={(e) => setSurvol(indexSousSouris(e, L, m.g, m.d, n))} role="img" aria-label="Courbe">
         {graduations.map((v) => (
           <g key={v}>

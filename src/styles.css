@@ -2318,9 +2318,7 @@ tr:last-child td {
     gap: 10px;
   }
   .s2,
-  .s3 {
-    grid-column: span 6;
-  }
+  .s3,
   .s4,
   .s5,
   .s6,
@@ -2329,6 +2327,17 @@ tr:last-child td {
   .s9,
   .s12 {
     grid-column: span 12;
+  }
+  /* Seules les tuiles marquées « demi » (un chiffre, une jauge) restent côte à côte. */
+  .tuile.demi {
+    grid-column: span 6;
+  }
+  .ligne-ecart {
+    grid-template-columns: 1fr 1fr;
+  }
+  .liste-ecarts .pilules {
+    justify-content: center;
+    padding: 10px 0 4px;
   }
   .tuile {
     padding: 16px 16px;
@@ -2634,4 +2643,17 @@ tr:last-child td {
   max-width: 400px;
   border-radius: 16px;
   display: block;
+}
+
+/* Fenêtres modales sur mobile : feuille collée en bas de l'écran. */
+@media (max-width: 640px) {
+  .voile {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .fenetre {
+    padding: 16px 14px 20px;
+    border-radius: 24px 24px 0 0;
+    max-height: 94%;
+  }
 }

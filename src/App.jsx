@@ -109,7 +109,11 @@ export default function App() {
             <button
               key={o.id}
               className={onglet === o.id ? "onglet actif" : "onglet"}
-              onClick={() => setOnglet(o.id)}
+              onClick={(e) => {
+                setOnglet(o.id);
+                // Sur mobile la barre défile : on garde l'onglet actif visible.
+                e.currentTarget.scrollIntoView?.({ inline: "center", block: "nearest", behavior: "smooth" });
+              }}
             >
               {o.nom}
             </button>

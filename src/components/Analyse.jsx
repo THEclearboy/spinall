@@ -226,6 +226,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
     return liste;
   }, [mainsScope, filtrePosition, ecartsSeulement, showdownSeulement, spotParMain]);
   const ecarts = useMemo(() => [...stats.ecarts].reverse(), [stats.ecarts]);
+  const [nbEcartsVisibles, setNbEcartsVisibles] = useState(30);
   // Évolution du respect des ranges : on ignore les 9 premiers spots puis on
   // ramène la série à 120 points au plus pour une courbe lisible.
   const evolution = useMemo(() => {
@@ -416,7 +417,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         {barreImport}
 
         {/* ---- Niveau 1 : l'essentiel — volume et cEV, puis argent ---- */}
-        <Tuile variante="lime" span={3} titre="Parties" sous={libelleScope}>
+        <Tuile variante="lime" span={3} classe="demi" titre="Parties" sous={libelleScope}>
           <div className="tuile-grand">{stats.parties.length}</div>
           <p className="tuile-pied">
             {pluriel("main", stats.nbMains)} · {pluriel("jour de jeu", nbJoursJoues)}
@@ -426,6 +427,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         <Tuile
           variante="blanc"
           span={3}
+          classe="demi"
           titre="cEV / partie"
           sous="jetons gagnés par partie, chance neutralisée"
           action={<Pilule variante="clair" titre="Jetons gagnés en théorie : les tapis payés avant la river sont comptés à leur équité (pot × équité)">?</Pilule>}
@@ -690,21 +692,21 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         </Tuile>
 
         {/* ---- Niveau 5 : style de jeu ---- */}
-        <Tuile variante="lavande" span={3} titre="VPIP" sous="mains jouées volontairement">
+        <Tuile variante="lavande" span={3} classe="demi" titre="VPIP" sous="mains jouées volontairement">
           <div className="anneau-bloc">
             <Anneau valeur={stats.vpip || 0} couleur="#46468c" taille={120} epaisseur={12} centre={pourcent(stats.vpip)} />
           </div>
         </Tuile>
-        <Tuile variante="lavande" span={3} titre="PFR" sous="relances pré-flop">
+        <Tuile variante="lavande" span={3} classe="demi" titre="PFR" sous="relances pré-flop">
           <div className="anneau-bloc">
             <Anneau valeur={stats.pfr || 0} couleur="#46468c" taille={120} epaisseur={12} centre={pourcent(stats.pfr)} />
           </div>
         </Tuile>
-        <Tuile variante="sombre" span={3} titre="Mains" sous="dans la sélection">
+        <Tuile variante="sombre" span={3} classe="demi" titre="Mains" sous="dans la sélection">
           <div className="tuile-grand">{stats.nbMains}</div>
           <p className="tuile-pied">{stats.mainsAvecHero} avec ta position connue</p>
         </Tuile>
-        <Tuile variante="sombre" span={3} titre="Par partie" sous="moyennes">
+        <Tuile variante="sombre" span={3} classe="demi" titre="Par partie" sous="moyennes">
           <ListeValeurs
             lignes={[
               { cle: "m", label: "Mains par partie", valeur: stats.parties.length ? unDecimal(stats.nbMains / stats.parties.length) : "—" },
@@ -757,7 +759,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         </div>
         <h4>Écarts ({stats.ecarts.length}) — clique pour voir le tableau</h4>
         <div className="liste-ecarts">
-          {ecarts.map((e) => (
+          {ecarts.slice(0, nbEcartsVisibles).map((e) => (
             <div key={e.handId} className="ecart">
               <button className="ligne-ecart" aria-expanded={ecartOuvert === e.handId} onClick={() => setEcartOuvert(ecartOuvert === e.handId ? null : e.handId)}>
                 <span className="muet">{dateHeure(e.date)}</span>
@@ -782,6 +784,13 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
             </div>
           ))}
           {stats.ecarts.length === 0 && <p className="muet">Aucun écart — impeccable !</p>}
+          {ecarts.length > nbEcartsVisibles && (
+            <div className="pilules">
+              <Pilule variante="clair" classe="sur-sombre" onClick={() => setNbEcartsVisibles((n) => n + 50)}>
+                Voir plus d'écarts ({ecarts.length - nbEcartsVisibles} restants)
+              </Pilule>
+            </div>
+          )}
         </div>
       </div>
 
