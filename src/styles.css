@@ -774,6 +774,14 @@ tr:last-child td {
 .graphe {
   position: relative;
   margin-top: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
+}
+.courbe svg {
+  max-height: 100%;
 }
 .courbe svg,
 .graphe svg {
@@ -818,7 +826,8 @@ tr:last-child td {
 }
 .courbe-ligne.taux,
 .graphe-ligne.taux {
-  stroke: var(--violet);
+  stroke: var(--lavande);
+  stroke-width: 3.5;
 }
 .courbe-point,
 .graphe-point {
@@ -849,6 +858,13 @@ tr:last-child td {
 .graphe-degrade-haut {
   stop-color: #c5ea3a;
   stop-opacity: 0.35;
+}
+.tuile--vert .courbe-aire-haut {
+  stop-color: var(--violet);
+  stop-opacity: 0.35;
+}
+.tuile--vert .courbe-aire-bas {
+  stop-color: var(--violet);
 }
 .courbe-aire-bas,
 .graphe-degrade-bas {

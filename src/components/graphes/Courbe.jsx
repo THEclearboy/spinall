@@ -7,11 +7,11 @@ import { cheminLisse, aireSousCourbe, indexSousSouris } from "./chemins.js";
  * etiquettesX : string[] (facultatif) ; formatY(v) ; infobulle(index) → nœuds React.
  * zero : tracer la ligne du zéro. aire : remplir sous la première série.
  */
-export function Courbe({ series, etiquettesX, formatY = (v) => String(v), infobulle, zero = true, aire = true, hauteur = 210, min: minForce, max: maxForce, idSuffixe = "" }) {
+export function Courbe({ series, etiquettesX, formatY = (v) => String(v), infobulle, zero = true, aire = true, hauteur = 210, largeur = 640, min: minForce, max: maxForce, idSuffixe = "" }) {
   const [survol, setSurvol] = useState(null);
   const n = series[0]?.valeurs.length || 0;
   if (n < 2) return null;
-  const L = 640;
+  const L = largeur;
   const H = hauteur;
   const m = { g: 48, d: 18, h: 18, b: etiquettesX ? 28 : 18 };
   const toutes = series.flatMap((s) => s.valeurs);

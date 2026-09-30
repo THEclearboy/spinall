@@ -224,6 +224,25 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
     return liste;
   }, [mainsScope, filtrePosition, ecartsSeulement, showdownSeulement, spotParMain]);
   const ecarts = useMemo(() => [...stats.ecarts].reverse(), [stats.ecarts]);
+  // Évolution du respect des ranges : on ignore les 9 premiers spots puis on
+  // ramène la série à 120 points au plus pour une courbe lisible.
+  const evolution = useMemo(() => {
+    const serie = stats.courbeConformite.length > 10 ? stats.courbeConformite.slice(9) : [];
+    if (serie.length <= 120) return serie;
+    const pas = serie.length / 120;
+    const points = [];
+    for (let i = 0; i < 120; i++) {
+      const debut = Math.floor(i * pas);
+      const fin = Math.max(debut + 1, Math.floor((i + 1) * pas));
+      const tranche = serie.slice(debut, fin);
+      points.push({
+        date: tranche[tranche.length - 1].date,
+        taux: tranche.reduce((a, p) => a + p.taux, 0) / tranche.length,
+        nbSpots: tranche[tranche.length - 1].nbSpots,
+      });
+    }
+    return points;
+  }, [stats.courbeConformite]);
   const partiesRecentes = useMemo(
     () => (periodeJours ? stats.partiesParJour.slice(-periodeJours) : stats.partiesParJour),
     [stats.partiesParJour, periodeJours],
@@ -570,15 +589,16 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         </Tuile>
 
         <Tuile variante="vert" span={3} titre="Ranges — évolution" sous="moyenne glissante sur 50 spots">
-          {stats.courbeConformite.length > 10 ? (
+          {evolution.length >= 2 ? (
             <Courbe
-              series={[{ cle: "taux", valeurs: stats.courbeConformite.slice(9).map((p) => p.taux), classe: "taux" }]}
+              series={[{ cle: "taux", valeurs: evolution.map((p) => p.taux), classe: "taux" }]}
               formatY={(v) => `${Math.round(100 * v)} %`}
               zero={false}
-              aire={false}
-              hauteur={170}
+              aire={true}
+              hauteur={360}
+              largeur={340}
               infobulle={(i) => {
-                const p = stats.courbeConformite.slice(9)[i];
+                const p = evolution[i];
                 return (
                   <>
                     <div>{dateHeure(p.date)}</div>
