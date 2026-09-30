@@ -633,16 +633,11 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         <Tuile variante="sombre" span={3} titre="Places" sous="1ᵉʳ / 2ᵉ / 3ᵉ">
           <Segments
             parts={[
-              { label: "1ᵉʳ", valeur: stats.places[1], couleur: "var(--lime)" },
-              { label: "2ᵉ", valeur: stats.places[2], couleur: "var(--lavande)" },
+              { label: "1ᵉʳ", valeur: stats.places[1], couleur: "var(--lime)", texte: "var(--texte-sombre)" },
+              { label: "2ᵉ", valeur: stats.places[2], couleur: "var(--lavande)", texte: "#14143a" },
               { label: "3ᵉ", valeur: stats.places[3], couleur: "var(--orange)" },
             ]}
           />
-          <div className="segments-legende">
-            <span style={{ "--c": "var(--lime)" }}>1ᵉʳ</span>
-            <span style={{ "--c": "var(--lavande)" }}>2ᵉ</span>
-            <span style={{ "--c": "var(--orange)" }}>3ᵉ</span>
-          </div>
           <ListeValeurs
             lignes={[
               { cle: "v", label: "Victoires", valeur: stats.partiesJouees.length ? pourcent(stats.places[1] / stats.partiesJouees.length) : "—" },

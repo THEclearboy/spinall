@@ -5,6 +5,8 @@ import { formatHeures } from "./heures.js";
 
 export const LARGEUR = 1080;
 export const HAUTEUR = 1440;
+/** Facteur de résolution du PNG exporté (2 → 2160 × 2880). */
+export const ECHELLE = 2;
 
 const C = {
   noir: "#000000",
@@ -301,18 +303,20 @@ export function dessinerBilan(ctx, b) {
   texte(ctx, "les 3 derniers jours", xH + 30, y + 72, { taille: 18, poids: 600, couleur: "#4b4f8f" });
   const totalH = b.heures3.reduce((s, j) => s + j.heures, 0);
   texte(ctx, formatHeures(totalH), xH + lH - 30, y + 58, { taille: 34, poids: 800, couleur: "#14143a", align: "right" });
-  // barres verticales
-  const zone = { x: xH + 30, y: y + 118, l: lH - 60, h: hB - 118 - 62 };
-  const maxH = Math.max(1, ...b.heures3.map((j) => j.heures));
+  // barres verticales : hauteur proportionnelle au jour le plus long, valeur au-dessus
+  const zone = { x: xH + 30, y: y + 112, l: lH - 60, h: hB - 112 - 60 };
+  const maxH = Math.max(1 / 60, ...b.heures3.map((j) => j.heures));
   const lCol = zone.l / 3;
   const lBarre = Math.min(96, lCol * 0.62);
+  const hEtiquette = 34; // place réservée à la valeur au-dessus de la barre
+  const socle = zone.y + zone.h; // bas des barres
+  ligne(ctx, zone.x, socle + 0.5, zone.x + zone.l, socle + 0.5, "rgba(20,20,58,0.25)");
   b.heures3.forEach((j, i) => {
     const cx = zone.x + i * lCol + lCol / 2;
-    const hb = Math.max(10, (j.heures / maxH) * (zone.h - 34));
-    const yb = zone.y + zone.h - hb;
-    arrondi(ctx, cx - lBarre / 2, zone.y + 30, lBarre, zone.h - 30, 14, "rgba(255,255,255,0.35)");
-    arrondi(ctx, cx - lBarre / 2, yb, lBarre, hb, 14, i === 2 ? "#14143a" : C.violet);
-    texte(ctx, j.heures ? formatHeures(j.heures) : "—", cx, yb - 12, { taille: 19, poids: 800, couleur: "#14143a", align: "center" });
+    const hb = j.heures > 0 ? Math.max(14, (j.heures / maxH) * (zone.h - hEtiquette)) : 6;
+    const yb = socle - hb;
+    arrondi(ctx, cx - lBarre / 2, yb, lBarre, hb, Math.min(14, hb / 2), j.heures > 0 ? (i === 2 ? "#14143a" : C.violet) : "rgba(20,20,58,0.2)");
+    texte(ctx, j.heures ? formatHeures(j.heures) : "0", cx, yb - 12, { taille: 19, poids: 800, couleur: "#14143a", align: "center" });
     texte(ctx, j.libelle, cx, y + hB - 26, { taille: 15, poids: 800, couleur: "#4b4f8f", align: "center", espacement: 1, maj: true });
   });
 

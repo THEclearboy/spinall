@@ -645,7 +645,7 @@ tr:last-child td {
   display: flex;
   gap: 6px;
   width: 100%;
-  margin-top: auto;
+  flex: 1 1 auto;
 }
 .segments.vide {
   background: var(--t-piste);
@@ -655,12 +655,20 @@ tr:last-child td {
   border-radius: 14px;
   min-width: 34px;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 8px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 12px;
   color: var(--blanc);
   font-weight: 800;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  overflow: hidden;
+}
+.segment-cle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.75;
+  letter-spacing: 0;
 }
 .segments-legende {
   display: flex;

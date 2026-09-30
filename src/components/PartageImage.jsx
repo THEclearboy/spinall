@@ -6,7 +6,7 @@ import { bilanParLimite } from "../lib/limites.js";
 import { cumulerEv } from "./graphes/GrapheEv.jsx";
 import { heuresParJour, cleJour } from "../lib/heures.js";
 import { euros } from "../lib/format.js";
-import { dessinerBilan, LARGEUR, HAUTEUR } from "../lib/bilan-image.js";
+import { dessinerBilan, LARGEUR, HAUTEUR, ECHELLE } from "../lib/bilan-image.js";
 
 /** Minuit local, il y a `recul` jours. */
 function debutJour(recul) {
@@ -82,9 +82,11 @@ export function PartageImage({ mains, charts, parMain, correctionsHeures, limite
       if (annule) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
-      canvas.width = LARGEUR;
-      canvas.height = HAUTEUR;
-      dessinerBilan(canvas.getContext("2d"), bilan);
+      canvas.width = LARGEUR * ECHELLE;
+      canvas.height = HAUTEUR * ECHELLE;
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(ECHELLE, 0, 0, ECHELLE, 0, 0);
+      dessinerBilan(ctx, bilan);
       setApercu(canvas.toDataURL("image/png"));
     })();
     return () => {
