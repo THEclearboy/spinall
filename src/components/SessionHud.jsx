@@ -18,6 +18,9 @@ import { formatHeures } from "../lib/heures.js";
 
 const INTERVALLE_SCAN_MS = 5000;
 const URL_HUD_WINDOWS = "https://theclearboy.github.io/spinall/hud-betclic.zip";
+/** Installation Windows en une commande (PowerShell) : écrit le script localement, sans la marque « téléchargé ». */
+const COMMANDE_INSTALLATION =
+  '$d="$env:LOCALAPPDATA\\Expresso Trainer"; $null=New-Item -ItemType Directory -Force $d; $r=Invoke-WebRequest -UseBasicParsing "https://theclearboy.github.io/spinall/hud-betclic.ps1.txt"; $t=[Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()).TrimStart([char]0xFEFF); [IO.File]::WriteAllText("$d\\hud-betclic.ps1",$t,(New-Object Text.UTF8Encoding $true)); powershell -NoProfile -ExecutionPolicy Bypass -File "$d\\hud-betclic.ps1" -Installer';
 const CLE_DOSSIER = "dossierHud";
 const DOSSIER_VIDE = { etat: "aucun", nom: null, nbFichiers: 0, nbSuivis: 0, dernier: null, erreur: null, detectees: 0 };
 
@@ -330,6 +333,26 @@ export function SessionHud({ actif, session, setSession, sessions, setSessions }
             Sur PC, la <a href={URL_HUD_WINDOWS}>version Windows</a> (zip) se lance avec Betclic, sans navigateur, et compte les
             tables toute seule.
           </p>
+          <details className="details-installation">
+            <summary>Installer la version Windows sans le zip (si Windows bloque le double-clic)</summary>
+            <p className="tuile-legende">Ouvre PowerShell (Win+X, puis Terminal), colle cette ligne et valide avec Entrée :</p>
+            <pre className="commande">{COMMANDE_INSTALLATION}</pre>
+            <div className="pilules">
+              <Pilule
+                variante="lime"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(COMMANDE_INSTALLATION);
+                    setMessage("Commande copiée : colle-la dans PowerShell.");
+                  } catch {
+                    setMessage("Copie impossible ici : sélectionne la commande à la main.");
+                  }
+                }}
+              >
+                Copier la commande
+              </Pilule>
+            </div>
+          </details>
           {message && <p className="muet">{message}</p>}
         </Tuile>
 

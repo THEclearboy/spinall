@@ -6,11 +6,23 @@ lancement de table, nombre de parties, cadence. Elle s'ouvre toute seule avec
 Betclic Poker et compte une partie à chaque nouvelle table ouverte.
 
 Mise en place (une seule fois)
-  1. Décompresse ce dossier où tu veux (par ex. Documents\hud-betclic) et ne le déplace plus.
+  1. Décompresse ce dossier où tu veux.
   2. Double-clique sur  installer-hud-betclic.cmd
-     → la veille démarre tout de suite et se relance à chaque démarrage de Windows.
+     → le script se copie dans %LOCALAPPDATA%\Expresso Trainer, la veille démarre tout de suite
+       et se relance à chaque démarrage de Windows ; le dossier du zip peut ensuite être supprimé.
      → dès que Betclic tourne, le HUD apparaît en haut à droite ; il se range quand Betclic se ferme.
-  Si Windows affiche un avertissement SmartScreen : « Informations complémentaires » puis « Exécuter quand même ».
+
+Si Windows bloque le double-clic
+  Les fichiers sortis d'un zip téléchargé portent une marque « vient d'Internet ».
+  - Écran bleu « Windows a protégé votre ordinateur » : « Informations complémentaires », puis « Exécuter quand même ».
+  - Fenêtre « Avertissement de sécurité » : « Exécuter ».
+  - Ou, avant de décompresser : clic droit sur le zip → Propriétés → cocher « Débloquer » → OK.
+  - Ou sans passer par le zip : ouvre PowerShell (Win+X → Terminal) et colle cette ligne, Entrée :
+      $d="$env:LOCALAPPDATA\Expresso Trainer"; $null=New-Item -ItemType Directory -Force $d; $r=Invoke-WebRequest -UseBasicParsing "https://theclearboy.github.io/spinall/hud-betclic.ps1.txt"; $t=[Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()).TrimStart([char]0xFEFF); [IO.File]::WriteAllText("$d\hud-betclic.ps1",$t,(New-Object Text.UTF8Encoding $true)); powershell -NoProfile -ExecutionPolicy Bypass -File "$d\hud-betclic.ps1" -Installer
+  - Message « Smart App Control a bloqué… » (Windows 11 récent) : Smart App Control interdit tout script non signé.
+    Sécurité Windows → Contrôle des applications et du navigateur → Smart App Control → Désactivé (définitif).
+  - Notification « Menace détectée » de Windows Defender : faux positif possible sur un script qui lit les fenêtres.
+    Sécurité Windows → Historique de protection → Autoriser, ou ajouter %LOCALAPPDATA%\Expresso Trainer aux exclusions.
 
 Au quotidien
   - Les tables ouvertes dans Betclic comptent automatiquement (+1 à la première, et le chrono démarre).
@@ -22,6 +34,8 @@ Au quotidien
 Autres commandes
   hud-betclic.cmd                 ouvre le HUD maintenant, même sans Betclic
   desinstaller-hud-betclic.cmd    arrête la veille et la retire du démarrage
+  (après installation, la copie du script est dans %LOCALAPPDATA%\Expresso Trainer\hud-betclic.ps1 ;
+   la même chose en PowerShell : & "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Desinstaller)
 
 Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -FiltreTable "*Expresso*")
   -Processus "*betclic*"    nom du processus du client (Gestionnaire des tâches → Détails)

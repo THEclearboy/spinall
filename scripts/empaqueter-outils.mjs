@@ -9,4 +9,6 @@ const fichiers = {};
 for (const nom of fs.readdirSync(source).sort()) fichiers[`hud-betclic/${nom}`] = new Uint8Array(fs.readFileSync(path.join(source, nom)));
 fs.mkdirSync("public", { recursive: true });
 fs.writeFileSync("public/hud-betclic.zip", zipSync(fichiers, { level: 6 }));
+// Script brut servi en texte (installation en une commande PowerShell, sans fichier téléchargé à la main).
+fs.copyFileSync(path.join(source, "hud-betclic.ps1"), "public/hud-betclic.ps1.txt");
 console.log(`public/hud-betclic.zip : ${Object.keys(fichiers).length} fichiers`);

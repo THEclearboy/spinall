@@ -2752,6 +2752,24 @@ tr:last-child td {
   background: var(--lime);
   box-shadow: 0 0 0 3px rgba(217, 255, 90, 0.2);
 }
+.details-installation summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--t-muet);
+}
+.commande {
+  margin: 6px 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
 /* Fenêtre flottante (Picture-in-Picture ou pop-up) : le HUD occupe tout. */
 body.hud-fenetre {
   overflow: hidden;

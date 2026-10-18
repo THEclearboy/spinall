@@ -51,6 +51,12 @@ Un script PowerShell + WPF, rien à installer : `hud-betclic.ps1` et ses lanceur
   ajuster le filtre), `position.json`.
 - `hud-betclic.cmd` ouvre le HUD maintenant ; si une veille tourne déjà, il lui
   demande d'afficher sa fenêtre (fichier `afficher.signal`).
+- Installation : `-Installer` recopie le script dans `%LOCALAPPDATA%\Expresso Trainer`
+  (réécrit, donc sans la marque « téléchargé d'Internet » qui fait bloquer les
+  `.cmd` du zip par SmartScreen) et y pointe le raccourci de démarrage. Le script
+  brut est aussi servi en `hud-betclic.ps1.txt` pour une installation en une
+  commande PowerShell (voir `LISEZMOI.txt` ou l'onglet HUD du site). Smart App
+  Control (Windows 11 récent) bloque tout script non signé : à désactiver.
 
 Non testé ici (pas de Windows) : vérifier d'abord avec `hud-betclic.cmd -Veille`
 dans une console visible que les tables sont bien détectées.

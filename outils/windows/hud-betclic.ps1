@@ -9,6 +9,10 @@
   Elle s'ouvre toute seule quand Betclic Poker démarre (mode veille) et se range
   quand il se ferme. Les sessions terminées sont archivées dans sessions.csv.
 
+  Installation sans rien télécharger à la main (si Windows bloque les .cmd du zip),
+  à coller dans PowerShell (Win+X → Terminal) :
+    $d="$env:LOCALAPPDATA\Expresso Trainer"; $null=New-Item -ItemType Directory -Force $d; $r=Invoke-WebRequest -UseBasicParsing "https://theclearboy.github.io/spinall/hud-betclic.ps1.txt"; $t=[Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()).TrimStart([char]0xFEFF); [IO.File]::WriteAllText("$d\hud-betclic.ps1",$t,(New-Object Text.UTF8Encoding $true)); powershell -NoProfile -ExecutionPolicy Bypass -File "$d\hud-betclic.ps1" -Installer
+
   Lancement (double-clic sur les .cmd fournis, ou depuis PowerShell) :
     hud-betclic.cmd                 ouvre le HUD maintenant
     installer-hud-betclic.cmd       veille : HUD automatique à chaque lancement de Betclic,
@@ -66,8 +70,8 @@ function Journal([string]$texte) {
 }
 
 # ======================================================= installation au démarrage
-function Arguments-Veille {
-  $a = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ('"' + $PSCommandPath + '"'), "-Veille")
+function Arguments-Veille([string]$script = $PSCommandPath) {
+  $a = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ('"' + $script + '"'), "-Veille")
   if ($Processus -ne "*betclic*") { $a += @("-Processus", ('"' + $Processus + '"')) }
   if ($FiltreTable -ne "*") { $a += @("-FiltreTable", ('"' + $FiltreTable + '"')) }
   if ($DelaiDemarrage -ne 30) { $a += @("-DelaiDemarrage", $DelaiDemarrage) }
@@ -92,13 +96,21 @@ function Arreter-Veilles {
 }
 
 function Installer-Demarrage {
-  $arguments = Arguments-Veille
+  # Copie locale du script, réécrite sans la marque « téléchargé d'Internet » :
+  # la veille tourne depuis là, le dossier du zip peut ensuite être supprimé.
+  $cible = Join-Path $Dossier "hud-betclic.ps1"
+  if ($PSCommandPath -and ($PSCommandPath -ne $cible)) {
+    $texte = [System.IO.File]::ReadAllText($PSCommandPath).TrimStart([char]0xFEFF)
+    [System.IO.File]::WriteAllText($cible, $texte, (New-Object System.Text.UTF8Encoding $true))
+    Journal "Script installé dans $cible"
+  }
+  $arguments = Arguments-Veille $cible
   $raccourci = Join-Path ([Environment]::GetFolderPath("Startup")) $NomRaccourci
   $wsh = New-Object -ComObject WScript.Shell
   $s = $wsh.CreateShortcut($raccourci)
   $s.TargetPath = "powershell.exe"
   $s.Arguments = $arguments
-  $s.WorkingDirectory = Split-Path -Parent $PSCommandPath
+  $s.WorkingDirectory = $Dossier
   $s.Description = "HUD Expresso Trainer : s'ouvre avec Betclic et compte les parties"
   $s.Save()
   Journal "Veille installée au démarrage de Windows : $raccourci"
