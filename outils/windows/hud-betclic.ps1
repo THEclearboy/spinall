@@ -82,6 +82,7 @@ param(
   [string]$Dossier = (Join-Path $env:LOCALAPPDATA "Expresso Trainer")
 )
 
+$Version = "2026-10-18.9"
 $ErrorActionPreference = "Stop"
 trap {
   # Erreur fatale (console cachée) : on la note et on l'affiche avant de s'arrêter.
@@ -249,11 +250,19 @@ function Lister-Fenetres {
   }
 }
 
-function Est-Table($fenetre) {
+function Est-Table($fenetre, $autresFenetres = @()) {
   if ($fenetre.Largeur -lt $TailleMinTable -or $fenetre.Hauteur -lt $TailleMinTable) { return $false }
   if (-not $fenetre.Titre) { return $false }
-  foreach ($x in $Exclusions) { if ($fenetre.Titre -like $x) { return $false } }
   if ($fenetre.Classe -eq "#32768" -or $fenetre.Classe -like "*Tooltip*") { return $false }
+  foreach ($x in $Exclusions) {
+    if ($fenetre.Titre -like $x) {
+      # Titre de lobby ou de dialogue : exclu, sauf s'il existe déjà une autre fenêtre du même titre
+      # (le client nomme parfois ses fenêtres de table comme l'application : la 2e est une table).
+      $jumelle = $false
+      foreach ($a in $autresFenetres) { if ($a.Hwnd -ne $fenetre.Hwnd -and $a.Titre -eq $fenetre.Titre) { $jumelle = $true; break } }
+      if (-not $jumelle -or $x -like "*captcha*" -or $x -eq "File Picker") { return $false }
+    }
+  }
   if ($FiltreTable -eq "*") { return $true }
   return ($fenetre.Titre -like $FiltreTable)
 }
@@ -536,7 +545,7 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapi
   $noms = @{}
   foreach ($p in Get-Process) { $noms[[int]$p.Id] = $p.ProcessName }
   $l = New-Object System.Collections.Generic.List[string]
-  $l.Add("Diagnostic HUD Expresso Trainer — " + (Get-Date))
+  $l.Add("Diagnostic HUD Expresso Trainer version $Version — " + (Get-Date))
   $l.Add("Réglages : -Processus '$Processus'  -FiltreTable '$FiltreTable'  -TailleMinTable $TailleMinTable  -DelaiDemarrage $DelaiDemarrage")
   $l.Add("")
   $l.Add("1. Processus reconnus comme Betclic : " + $procs.Count)
@@ -554,7 +563,7 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapi
   $fenetresBetclic = @(Lister-Fenetres | Where-Object { $pids.ContainsKey($_.ProcId) })
   if ($fenetresBetclic.Count -eq 0) { $l.Add("   (aucune)") }
   foreach ($f in $fenetresBetclic) {
-    $table = if (Est-Table $f) { "TABLE ?" } else { "ignorée" }
+    $table = if (Est-Table $f $fenetresBetclic) { "TABLE ?" } else { "ignorée" }
     $l.Add("   " + $table + "  " + (Libelle-Fenetre $f) + "  hwnd " + $f.Hwnd)
     foreach ($e in [FenetresWin]::ListerEnfants([int64]$f.Hwnd)) {
       $q = $e -split "`t", 5
@@ -840,7 +849,7 @@ $xaml = @"
                    FontWeight="Bold" Margin="0,3,10,0"/>
         <StackPanel Orientation="Horizontal">
           <Ellipse x:Name="Point" Width="8" Height="8" Fill="#FF9A9A9A" Margin="0,1,7,0" VerticalAlignment="Center"/>
-          <TextBlock Text="EXPRESSO" Foreground="#FFD9FF5A" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
+          <TextBlock x:Name="Marque" Text="EXPRESSO" Foreground="#FFD9FF5A" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
         </StackPanel>
       </DockPanel>
       <TextBlock x:Name="Chrono" Grid.Row="1" Text="0:00" Foreground="#FFD9FF5A" FontSize="56" FontWeight="ExtraBold"
@@ -861,7 +870,8 @@ $xaml = @"
 
 $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $ctl = @{}
-foreach ($nom in @("Fermer", "Reset", "Cadence", "Point", "Chrono", "Moins", "Plus", "Nombre", "Libelle")) { $ctl[$nom] = $window.FindName($nom) }
+foreach ($nom in @("Fermer", "Reset", "Cadence", "Point", "Chrono", "Moins", "Plus", "Nombre", "Libelle", "Marque")) { $ctl[$nom] = $window.FindName($nom) }
+$ctl.Marque.ToolTip = "HUD Expresso Trainer, version $Version (clic droit pour le menu)"
 $CouleurLime = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FFD9FF5A")
 $CouleurGris = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FF9A9A9A")
 $CouleurOrange = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FFE8834A")
@@ -975,6 +985,7 @@ foreach ($entree in @(
     } },
   @{ texte = "Ouvrir le dossier (journal, sessions)"; action = { Start-Process $Dossier } },
   @{ texte = "Ouvrir Expresso Trainer (site)"; action = { Start-Process $UrlSite } },
+  @{ texte = "Version $Version"; action = { [void][System.Windows.MessageBox]::Show($window, "HUD Expresso Trainer`nversion $Version`n`nDossier : $Dossier", "HUD Expresso Trainer") } },
   @{ texte = "Quitter le HUD"; action = { Quitter } }
 )) {
   $item = New-Object System.Windows.Controls.MenuItem
@@ -1041,7 +1052,7 @@ function Passage-Veille {
     foreach ($f in $fenetres) {
       $presentes[$f.Hwnd] = $true
       if ($script:etat.connues.ContainsKey($f.Hwnd)) {
-        if ($CompterTitres -and $script:etat.connues[$f.Hwnd] -ne $f.Titre -and -not $demarrage -and (Est-Table $f)) {
+        if ($CompterTitres -and $script:etat.connues[$f.Hwnd] -ne $f.Titre -and -not $demarrage -and (Est-Table $f $fenetres)) {
           $script:etat.tablesVues += 1
           Journal ("Table (nouveau titre) : " + (Libelle-Fenetre $f))
           Ajouter-Partie 1 "table"
@@ -1054,7 +1065,7 @@ function Passage-Veille {
         Journal ("Fenêtre déjà ouverte, non comptée : " + (Libelle-Fenetre $f))
       } elseif ($demarrage) {
         Journal ("Fenêtre de démarrage de Betclic, non comptée : " + (Libelle-Fenetre $f))
-      } elseif (Est-Table $f) {
+      } elseif (Est-Table $f $fenetres) {
         if ($ModeTables -eq "uia") {
           Journal ("Nouvelle fenêtre (mode uia : non comptée) : " + (Libelle-Fenetre $f))
         } else {
@@ -1178,10 +1189,10 @@ $timerVeille.Add_Tick({ Passage-Veille })
 $timerVeille.Start()
 
 if ($Veille) {
-  Journal ("Veille démarrée : processus '$Processus', règle $RegleUia, début de partie '" + ($MotifsDepart -join " | ") + "', table '" + ($MotifsTable -join " | ") + "', mode $ModeTables" + ($(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" })) + ", dossier $Dossier")
+  Journal ("Veille démarrée (version $Version) : processus '$Processus', règle $RegleUia, début de partie '" + ($MotifsDepart -join " | ") + "', table '" + ($MotifsTable -join " | ") + "', mode $ModeTables" + ($(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" })) + ", dossier $Dossier")
   Passage-Veille
 } else {
-  Journal "HUD ouvert."
+  Journal "HUD ouvert (version $Version)."
   Afficher-Hud
 }
 [System.Windows.Threading.Dispatcher]::Run()
