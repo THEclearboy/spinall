@@ -170,10 +170,7 @@ function Desinstaller-Demarrage {
 if ($Desinstaller) { Desinstaller-Demarrage; return }
 if ($Installer) { Installer-Demarrage; return }
 if ($Diagnostic) { [void](Diagnostic); return }
-if ($Copier) {
-  if (Copier-Pour-Claude) { Write-Host "Copié : colle maintenant (Ctrl+V) dans la conversation avec Claude." }
-  return
-}
+if ($Copier) { Write-Host (Copier-Pour-Claude); return }
 if ($MettreAJour) { Mettre-A-Jour; return }
 
 # Lancement direct alors qu'une veille tourne déjà : on lui demande d'afficher sa fenêtre.
@@ -325,14 +322,16 @@ function Elements-Tables([string]$hwnd) {
   return $resultat
 }
 
-function Dump-Uia([string]$hwnd, $l, [int]$max = 2500) {
+function Dump-Uia([string]$hwnd, $l, [int]$max = 2500, [int]$BudgetMs = 20000) {
   # Arbre d'accessibilité (vue contrôle) : type | classe | automationId | nom, indenté par profondeur.
   $racine = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][int64]$hwnd)
   $marcheur = [System.Windows.Automation.TreeWalker]::ControlViewWalker
   $pile = New-Object System.Collections.Generic.Stack[object]
   $pile.Push(@($racine, 0))
   $compte = 0
+  $chrono = [System.Diagnostics.Stopwatch]::StartNew()
   while ($pile.Count -gt 0 -and $compte -lt $max) {
+    if ($chrono.ElapsedMilliseconds -gt $BudgetMs) { $l.Add("   … (arrêt après $BudgetMs ms, $compte éléments)"); return }
     $paire = $pile.Pop()
     $e = $paire[0]
     $prof = $paire[1]
@@ -392,7 +391,7 @@ function Scanner-Historiques {
   return $nouvelles
 }
 
-function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500) {
+function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapide) {
   $procs = Processus-Betclic
   $pids = Pids-Betclic $procs
   $noms = @{}
@@ -433,7 +432,7 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500) {
       $l.Add("   Fenêtre " + (Libelle-Fenetre $f) + " : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $tables.Count + " correspondant à un motif de table :")
       foreach ($t in $tables) { $l.Add("      " + $t.Genre.ToUpper() + " : " + $t.Nom + " [" + $t.Type + ", " + $t.Classe + ", id " + $t.Cle + "]") }
       $l.Add("   Arbre (type | classe | id | nom) :")
-      Dump-Uia $f.Hwnd $l $TailleArbre
+      Dump-Uia $f.Hwnd $l $TailleArbre $(if ($Rapide) { 5000 } else { 20000 })
     }
   } else { $l.Add("   (UI Automation indisponible)") }
   $l.Add("")
@@ -453,8 +452,12 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500) {
   }
   $l.Add("")
   $l.Add("5. Dossiers Betclic / poker et leurs fichiers récents (historiques de mains sur le disque ?) :")
-  $racines = @($env:APPDATA, $env:LOCALAPPDATA, $env:PROGRAMDATA, (Join-Path $env:USERPROFILE "Documents")) | Where-Object { $_ -and (Test-Path $_) }
+  if ($Rapide) { $l.Add("   (passé en mode rapide ; -Diagnostic complet pour l'avoir)") }
+  $racines = @()
+  if (-not $Rapide) { $racines = @($env:APPDATA, $env:LOCALAPPDATA, $env:PROGRAMDATA, (Join-Path $env:USERPROFILE "Documents")) | Where-Object { $_ -and (Test-Path $_) } }
+  $chronoDossiers = [System.Diagnostics.Stopwatch]::StartNew()
   foreach ($r in $racines) {
+    if ($chronoDossiers.ElapsedMilliseconds -gt 25000) { $l.Add("   … (recherche arrêtée après 25 s)"); break }
     $dossiers = @(Get-ChildItem -Path $r -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue |
       Where-Object { $_.Name -like "*betclic*" -or $_.Name -like "*poker*" -or $_.Name -like "*playground*" })
     foreach ($d in $dossiers) {
@@ -482,17 +485,24 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500) {
 
 # Journal (dernières lignes) + diagnostic dans le presse-papiers : il n'y a plus qu'à coller.
 function Copier-Pour-Claude {
+  # Journal + diagnostic rapide → presse-papiers, et pour-claude.txt en secours (ouvert si la copie échoue).
+  $fichier = Join-Path $Dossier "pour-claude.txt"
   $journal = ""
   $cheminJournal = Join-Path $Dossier "journal.log"
   if (Test-Path $cheminJournal) { $journal = (Get-Content -Path $cheminJournal -Encoding UTF8 | Select-Object -Last 150) -join "`r`n" }
-  $texte = "=== journal.log (dernières lignes) ===`r`n" + $journal + "`r`n`r`n=== diagnostic.txt ===`r`n" + (Diagnostic -Silencieux -TailleArbre 1500)
+  $diag = ""
+  try { $diag = Diagnostic -Silencieux -TailleArbre 800 -Rapide } catch { $diag = "diagnostic impossible : " + $_.Exception.Message }
+  $texte = "=== journal.log (dernières lignes) ===`r`n" + $journal + "`r`n`r`n=== diagnostic (rapide) ===`r`n" + $diag
+  try { [System.IO.File]::WriteAllText($fichier, $texte, (New-Object System.Text.UTF8Encoding $true)) } catch {}
+  $lignes = ($texte -split "`n").Count
   try {
     Set-Clipboard -Value $texte
-    Journal ("Journal et diagnostic copiés dans le presse-papiers (" + $texte.Length + " caractères) : colle-les dans la conversation.")
-    return $true
+    Journal ("Journal et diagnostic copiés dans le presse-papiers ($lignes lignes) ; aussi dans $fichier")
+    return "Copié : $lignes lignes dans le presse-papiers.`n`nColle-les dans la conversation avec Ctrl+V.`nLe même texte est dans le fichier :`n$fichier"
   } catch {
-    Journal ("Copie impossible : " + $_.Exception.Message)
-    return $false
+    Journal ("Copie impossible (" + $_.Exception.Message + ") : texte dans $fichier")
+    try { Start-Process notepad.exe $fichier } catch {}
+    return "La copie dans le presse-papiers a échoué.`n`nLe texte est ouvert dans le Bloc-notes : Ctrl+A puis Ctrl+C, et colle-le dans la conversation.`n$fichier"
   }
 }
 
@@ -795,7 +805,11 @@ foreach ($entree in @(
   @{ texte = "Remettre à zéro (sans archiver)"; action = { Remettre-A-Zero } },
   @{ texte = "Copier journal + diagnostic (à coller à Claude)"; action = {
       $window.Cursor = [System.Windows.Input.Cursors]::Wait
-      try { [void](Copier-Pour-Claude) } finally { $window.Cursor = $null }
+      $ctl.Cadence.Text = "copie…"
+      $window.Dispatcher.Invoke([Action] {}, [System.Windows.Threading.DispatcherPriority]::Render)
+      $resultat = ""
+      try { $resultat = Copier-Pour-Claude } catch { $resultat = "Erreur : " + $_.Exception.Message } finally { $window.Cursor = $null; Rafraichir }
+      [void][System.Windows.MessageBox]::Show($window, $resultat, "HUD Expresso Trainer")
     } },
   @{ texte = "Mettre à jour le HUD (dernière version)"; action = {
       try { Mettre-A-Jour; $script:etat.quitter = $true } catch { Journal ("Mise à jour impossible : " + $_.Exception.Message) }
