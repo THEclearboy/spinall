@@ -2645,6 +2645,128 @@ tr:last-child td {
   display: block;
 }
 
+/* ----------------------------------------------------------------- hud */
+.hud {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px;
+  background: var(--noir);
+  color: var(--blanc);
+  border-radius: 20px;
+  min-width: 0;
+}
+.hud-apercu {
+  max-width: 300px;
+  border: 1px solid var(--separateur);
+  border-radius: 20px;
+}
+.hud-entete {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hud-marque {
+  color: var(--lime);
+}
+.hud-cadence {
+  color: var(--texte-muet);
+}
+.hud-chrono {
+  font-size: clamp(2rem, 22cqw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--lime);
+  font-variant-numeric: tabular-nums;
+}
+.hud-bas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.hud-parties {
+  font-size: 0.95rem;
+  color: var(--texte-muet);
+  white-space: nowrap;
+}
+.hud-parties strong {
+  color: var(--blanc);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-right: 2px;
+}
+.hud-boutons {
+  display: flex;
+  gap: 6px;
+}
+.hud-plus,
+.hud-moins {
+  border: none;
+  border-radius: 980px;
+  font-weight: 800;
+  min-height: 38px;
+  padding: 0 18px;
+  font-size: 1rem;
+  font-family: inherit;
+}
+.hud-plus {
+  background: var(--lime);
+  color: var(--texte-sombre);
+}
+.hud-moins {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--blanc);
+  padding: 0 12px;
+}
+.hud-plus:hover,
+.hud-moins:hover {
+  filter: brightness(0.92);
+}
+.hud-grand-chrono {
+  font-variant-numeric: tabular-nums;
+  font-size: 5rem;
+}
+@media (max-width: 640px) {
+  .hud-grand-chrono {
+    font-size: 2.6rem;
+  }
+}
+.hud-point {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--texte-muet);
+  margin-right: 4px;
+  vertical-align: 0;
+}
+.hud-point.actif {
+  background: var(--lime);
+  box-shadow: 0 0 0 3px rgba(217, 255, 90, 0.2);
+}
+/* Fenêtre flottante (Picture-in-Picture ou pop-up) : le HUD occupe tout. */
+body.hud-fenetre {
+  overflow: hidden;
+}
+body.hud-fenetre .hud-racine,
+body.hud-fenetre .hud {
+  min-height: 100vh;
+}
+body.hud-fenetre .hud {
+  border-radius: 0;
+  justify-content: space-between;
+  padding: 12px 16px 14px;
+  user-select: none;
+}
+
 /* Fenêtres modales sur mobile : feuille collée en bas de l'écran. */
 @media (max-width: 640px) {
   .voile {

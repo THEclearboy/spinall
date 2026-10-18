@@ -25,6 +25,28 @@ npm test         # tests unitaires (parseur, ranges, équité, analyse)
 npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 ```
 
+
+## HUD de session
+
+L'onglet **HUD** suit une session de jeu : chrono depuis le premier lancement de
+table, nombre de parties jouées et cadence (parties / heure).
+
+- **Compteur** : `+1` / `−1` à la main ; le premier `+1` (ou le bouton Lancer)
+  démarre le chrono. **Terminer** archive la session (durée, parties, cadence)
+  dans la liste des sessions précédentes.
+- **Fenêtre flottante** : « Ouvrir le HUD » ouvre une petite fenêtre
+  Picture-in-Picture (Chrome / Edge 116+) qui reste au-dessus du client Betclic.
+  Touches `+` / `Entrée` et `−` dans la fenêtre. Ailleurs, le HUD s'ouvre dans
+  une fenêtre pop-up classique.
+- **Comptage automatique** (Chrome / Edge sur ordinateur) : choisir le dossier
+  où le client écrit les historiques de mains ; chaque nouveau `Game ID` qui y
+  apparaît compte une partie et lance le chrono au besoin. Les parties déjà
+  présentes au lancement ne sont pas comptées ; seuls les fichiers modifiés
+  dans les 48 h sont relus (toutes les 5 s). Le dossier est mémorisé ; le
+  navigateur peut redemander l'autorisation de lecture à la visite suivante.
+- Le HUD et le comptage continuent sur les autres onglets ; la session en cours
+  survit à un rechargement (`expresso.session`, `expresso.sessions`).
+
 ## Déployer
 
 Le build est un fichier HTML autonome (`dist/index.html`, ~330 Ko, police incluse).

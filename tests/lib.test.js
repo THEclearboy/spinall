@@ -213,3 +213,77 @@ test("cases mixtes : deux actions acceptées, nouveaux tableaux HU", () => {
   assert.equal(estCorrecte("allin/call", "raise"), false);
   assert.equal(estCorrecte("fold", "fold"), true);
 });
+
+test("session HUD : chrono, compteur, détection, archive", async () => {
+  const s = await import("../src/lib/session.js");
+  const t0 = Date.parse("2026-10-18T20:00:00Z");
+  let session = s.nouvelleSession();
+  assert.equal(s.nombreParties(session), 0);
+  assert.equal(s.dureeMs(session, t0 + 5000), 0);
+  // +1 lance le chrono ; −1 ne descend pas sous zéro
+  session = s.ajouterPartie(session, 1, t0);
+  assert.equal(session.debut, t0);
+  session = s.ajouterPartie(session, -1, t0 + 1000);
+  session = s.ajouterPartie(session, -1, t0 + 1000);
+  assert.equal(s.nombreParties(session), 0);
+  assert.equal(session.debut, t0);
+  // détection : pas de doublon, parties manuelles + automatiques
+  session = s.ajouterPartiesDetectees(session, ["g1", "g2", "g1"], t0 + 60_000);
+  session = s.ajouterPartiesDetectees(session, ["g2", "g3"], t0 + 120_000);
+  session = s.ajouterPartie(session, 1, t0 + 130_000);
+  assert.deepEqual(session.partiesAuto, ["g1", "g2", "g3"]);
+  assert.equal(s.nombreParties(session), 4);
+  // cadence et chrono
+  assert.equal(s.partiesParHeure(session, t0 + 30_000), null);
+  assert.equal(Math.round(s.partiesParHeure(session, t0 + 1_800_000)), 8);
+  assert.equal(s.formatChrono(45_000), "0:45");
+  assert.equal(s.formatChrono(12 * 60_000 + 4000), "12:04");
+  assert.equal(s.formatChrono(3_932_000), "1:05:32");
+  // archive
+  const [archive, vierge] = s.terminer(session, [], t0 + 3_600_000);
+  assert.equal(archive.length, 1);
+  assert.deepEqual(archive[0], { debut: t0, fin: t0 + 3_600_000, parties: 4 });
+  assert.equal(vierge.debut, null);
+  assert.deepEqual(s.terminer(vierge, archive, t0)[0], archive);
+  // ids de parties dans un texte d'historique
+  const ids = s.idsPartiesDuTexte("*** HEADER ***\nHand ID: 1\nGame ID: 777\n----\n*** HEADER ***\nHand ID: 2\nGame ID: 777\n----\nGame ID: 778 \n");
+  assert.deepEqual([...ids], ["777", "778"]);
+});
+
+test("surveillance du dossier : fichiers existants ignorés, nouvelles parties comptées", async () => {
+  const { creerSurveillance, scanner } = await import("../src/lib/dossier.js");
+  const maintenant = Date.parse("2026-10-18T20:00:00Z");
+  const fichiers = new Map();
+  const fauxFichier = (nom, texte, mtime) => ({
+    kind: "file",
+    async getFile() {
+      return { lastModified: mtime, size: texte.length, text: async () => texte };
+    },
+  });
+  const dossier = {
+    kind: "directory",
+    async *entries() {
+      for (const [nom, h] of fichiers) yield [nom, h];
+    },
+  };
+  const main = (partie) => `*** HEADER ***\nHand ID: ${partie}-1\nGame ID: ${partie}\n`;
+  fichiers.set("vieux.txt", fauxFichier("vieux.txt", main("ancienne"), maintenant - 10 * 24 * 3_600_000));
+  fichiers.set("hier.txt", fauxFichier("hier.txt", main("recente"), maintenant - 3_600_000));
+  const surv = creerSurveillance(dossier);
+  let r = await scanner(surv, maintenant);
+  assert.deepEqual(r.nouvelles, []);
+  assert.equal(r.nbFichiers, 2);
+  assert.equal(r.nbSuivis, 1);
+  // rien ne bouge : rien de nouveau
+  r = await scanner(surv, maintenant + 5000);
+  assert.deepEqual(r.nouvelles, []);
+  // une partie s'ajoute au fichier récent, un nouveau fichier apparaît
+  fichiers.set("hier.txt", fauxFichier("hier.txt", main("recente") + "----\n" + main("p1"), maintenant + 6000));
+  fichiers.set("spin-p2.txt", fauxFichier("spin-p2.txt", main("p2"), maintenant + 7000));
+  r = await scanner(surv, maintenant + 10_000);
+  assert.deepEqual(r.nouvelles.sort(), ["p1", "p2"]);
+  // la même partie réécrite (main suivante) n'est pas recomptée
+  fichiers.set("spin-p2.txt", fauxFichier("spin-p2.txt", main("p2") + "----\n*** HEADER ***\nHand ID: p2-2\nGame ID: p2\n", maintenant + 12_000));
+  r = await scanner(surv, maintenant + 15_000);
+  assert.deepEqual(r.nouvelles, []);
+});

@@ -8,6 +8,8 @@ import { Analyse } from "./components/Analyse.jsx";
 import { Ranges } from "./components/Ranges.jsx";
 import { Reglages } from "./components/Reglages.jsx";
 import { Situation } from "./components/Situation.jsx";
+import { SessionHud } from "./components/SessionHud.jsx";
+import { nouvelleSession } from "./lib/session.js";
 
 function reglagesParDefaut() {
   return {
@@ -22,6 +24,7 @@ const ONGLETS = [
   { id: "entrainement", nom: "Entraînement" },
   { id: "stats", nom: "Statistiques" },
   { id: "analyse", nom: "Analyse" },
+  { id: "hud", nom: "HUD" },
   { id: "situation", nom: "Situation" },
   { id: "ranges", nom: "Ranges" },
   { id: "reglages", nom: "Réglages" },
@@ -34,6 +37,8 @@ export default function App() {
   const [poids, setPoids] = useState(() => lireLocal("poids", {}));
   const [reglages, setReglages] = useState(() => ({ ...reglagesParDefaut(), ...lireLocal("reglages", {}) }));
   const [analyse, setAnalyse] = useState({ version: 1, mains: [] });
+  const [session, setSession] = useState(() => ({ ...nouvelleSession(), ...lireLocal("session", {}) }));
+  const [sessions, setSessions] = useState(() => lireLocal("sessions", []));
   const [analyseChargee, setAnalyseChargee] = useState(false);
   const [sauvegardeOk, setSauvegardeOk] = useState(true);
 
@@ -85,6 +90,12 @@ export default function App() {
   useEffect(() => {
     ecrireLocal("reglages", reglages);
   }, [reglages]);
+  useEffect(() => {
+    ecrireLocal("session", session);
+  }, [session]);
+  useEffect(() => {
+    ecrireLocal("sessions", sessions);
+  }, [sessions]);
   useEffect(() => {
     if (!analyseChargee) return;
     let annule = false;
@@ -141,6 +152,8 @@ export default function App() {
             sauvegardeOk={sauvegardeOk}
           />
         )}
+        {/* Toujours monté : le HUD flottant et le comptage continuent sur les autres onglets. */}
+        <SessionHud actif={onglet === "hud"} session={session} setSession={setSession} sessions={sessions} setSessions={setSessions} />
         {onglet === "situation" && <Situation />}
         {onglet === "ranges" && (
           <Ranges donnees={donnees} charts={charts} overrides={overrides} setOverrides={setOverrides} />
