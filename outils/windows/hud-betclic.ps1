@@ -27,32 +27,23 @@
     powershell -NoProfile -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Expresso Trainer\hud-betclic.ps1" -Diagnostic
   → diagnostic.txt s'ouvre dans le Bloc-notes avec tout ce que le HUD voit (processus, fenêtres, titres, tailles).
 
-  Options (à ajouter après la commande, ex. : installer-hud-betclic.cmd -FiltreTable "*Expresso*") :
-    -Processus "*betclic*"   nom du processus du client Betclic (joker * accepté ;
-                             Gestionnaire des tâches → Détails si le client porte un autre nom)
-    -MotifTable "Spin & Rush - *|Expresso*"
-                             noms d'éléments d'interface qui signalent une table ouverte à l'intérieur
-                             de la fenêtre Betclic (plusieurs motifs séparés par |, joker * accepté)
-    -ModeTables auto         auto : chaque nouvelle fenêtre de table compte (option Betclic « Afficher les
-                             tables dans des fenêtres indépendantes », recommandée) ET lecture à l'intérieur
-                             des fenêtres restantes ; fenetres ou uia pour n'utiliser qu'un seul canal
-    -ExclureFenetres "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*"
-                             titres de fenêtres de Betclic qui ne sont jamais des tables
+  Options (à ajouter après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush*") :
+    -Processus "*betclic*"   nom du processus du client Betclic (joker * accepté)
+    -MotifTable "Spin & Rush*|Expresso*|Spin & Go*"
+                             titres des fenêtres de table (option Betclic « Afficher les tables dans des
+                             fenêtres indépendantes », indispensable). Une fenêtre qui apparaît avec un tel
+                             titre, ou dont le titre le devient, = une partie.
     -MotifDepart "10 - 20|10-20|10 / 20"
-                             texte affiché seulement au début d'une partie (niveau de blinds 1) : quand
-                             il apparaît, une partie commence. Signal par défaut, insensible au lobby.
-    -RegleUia depart         depart : une partie quand un texte de -MotifDepart apparaît (confirmé à la
-                             lecture suivante) ; nombre : quand le nombre d'éléments -MotifTable augmente ;
-                             ids : chaque nouvel élément -MotifTable compte
+                             texte du niveau de blinds 1, lu à l'intérieur des fenêtres de table (en
+                             arrière-plan) : s'il réapparaît dans une fenêtre réutilisée = nouvelle partie
+    -SansLectureInterieure   ne compter que par les titres de fenêtres
+    -DelaiMemePartie 90      secondes après une partie comptée pendant lesquelles le niveau 1 de la
+                             même fenêtre ne recompte pas
+    -TailleMinTable 300      taille minimale (px) d'une fenêtre de table
+    -PauseMax 120            minutes sans activité au-delà desquelles une nouvelle session commence
     -DossierHistoriques "<chemin>"
                              si le client écrit ses historiques de mains sur le disque : chaque nouveau
-                             « Game ID » qui apparaît compte une partie (le plus fiable quand ça existe)
-    -FiltreTable "*"         fenêtres à part : ne compter que celles dont le titre correspond
-    -CompterTitres           compter aussi un changement de titre d'une table déjà ouverte
-                             (si le client réutilise la même fenêtre d'une partie à l'autre)
-    -DelaiDemarrage 30       secondes après le lancement de Betclic pendant lesquelles les
-                             fenêtres (connexion, lobby) ne comptent pas
-    -PauseMax 120            minutes sans activité au-delà desquelles une nouvelle session commence
+                             « Game ID » compte une partie
     -Dossier "<chemin>"      où sont écrits session, sessions.csv et journal.log
                              (par défaut : %LOCALAPPDATA%\Expresso Trainer)
 
@@ -67,16 +58,12 @@ param(
   [switch]$Diagnostic,
   [switch]$Copier,
   [switch]$MettreAJour,
-  [switch]$CompterTitres,
+  [switch]$SansLectureInterieure,
   [string]$Processus = "*betclic*",
-  [string]$FiltreTable = "*",
-  [string]$MotifTable = "Spin & Rush - *|Expresso*",
-  [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "auto",
-  [string]$ExclureFenetres = "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*",
+  [string]$MotifTable = "Spin & Rush*|Expresso*|Spin & Go*",
   [string]$MotifDepart = "10 - 20|10-20|10 / 20",
-  [ValidateSet("depart", "nombre", "ids")][string]$RegleUia = "depart",
   [string]$DossierHistoriques = "",
-  [int]$DelaiDemarrage = 30,
+  [int]$DelaiMemePartie = 90,
   [int]$PauseMax = 120,
   [int]$TailleMinTable = 300,
   [string]$Dossier = (Join-Path $env:LOCALAPPDATA "Expresso Trainer")
@@ -109,18 +96,14 @@ function Journal([string]$texte) {
 function Arguments-Veille([string]$script = $PSCommandPath) {
   $a = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ('"' + $script + '"'), "-Veille")
   if ($Processus -ne "*betclic*") { $a += @("-Processus", ('"' + $Processus + '"')) }
-  if ($FiltreTable -ne "*") { $a += @("-FiltreTable", ('"' + $FiltreTable + '"')) }
-  if ($MotifTable -ne "Spin & Rush - *|Expresso*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
-  if ($ModeTables -ne "auto") { $a += @("-ModeTables", $ModeTables) }
-  if ($ExclureFenetres -ne "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*") { $a += @("-ExclureFenetres", ('"' + $ExclureFenetres + '"')) }
+  if ($MotifTable -ne "Spin & Rush*|Expresso*|Spin & Go*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
   if ($MotifDepart -ne "10 - 20|10-20|10 / 20") { $a += @("-MotifDepart", ('"' + $MotifDepart + '"')) }
-  if ($RegleUia -ne "depart") { $a += @("-RegleUia", $RegleUia) }
   if ($DossierHistoriques) { $a += @("-DossierHistoriques", ('"' + $DossierHistoriques + '"')) }
-  if ($DelaiDemarrage -ne 30) { $a += @("-DelaiDemarrage", $DelaiDemarrage) }
+  if ($DelaiMemePartie -ne 90) { $a += @("-DelaiMemePartie", $DelaiMemePartie) }
   if ($PauseMax -ne 120) { $a += @("-PauseMax", $PauseMax) }
   if ($TailleMinTable -ne 300) { $a += @("-TailleMinTable", $TailleMinTable) }
   if ($Dossier -ne $DossierParDefaut) { $a += @("-Dossier", ('"' + $Dossier + '"')) }
-  if ($CompterTitres) { $a += "-CompterTitres" }
+  if ($SansLectureInterieure) { $a += "-SansLectureInterieure" }
   return ($a -join " ")
 }
 
@@ -250,21 +233,17 @@ function Lister-Fenetres {
   }
 }
 
-function Est-Table($fenetre, $autresFenetres = @()) {
-  if ($fenetre.Largeur -lt $TailleMinTable -or $fenetre.Hauteur -lt $TailleMinTable) { return $false }
-  if (-not $fenetre.Titre) { return $false }
-  if ($fenetre.Classe -eq "#32768" -or $fenetre.Classe -like "*Tooltip*") { return $false }
-  foreach ($x in $Exclusions) {
-    if ($fenetre.Titre -like $x) {
-      # Titre de lobby ou de dialogue : exclu, sauf s'il existe déjà une autre fenêtre du même titre
-      # (le client nomme parfois ses fenêtres de table comme l'application : la 2e est une table).
-      $jumelle = $false
-      foreach ($a in $autresFenetres) { if ($a.Hwnd -ne $fenetre.Hwnd -and $a.Titre -eq $fenetre.Titre) { $jumelle = $true; break } }
-      if (-not $jumelle -or $x -like "*captcha*" -or $x -eq "File Picker") { return $false }
-    }
-  }
-  if ($FiltreTable -eq "*") { return $true }
-  return ($fenetre.Titre -like $FiltreTable)
+function Est-TitrePartie([string]$titre) {
+  if (-not $titre) { return $false }
+  $t = ($titre -replace "\s+", " ").Trim()
+  foreach ($m in $MotifsTable) { if ($t -like $m) { return $true } }
+  return $false
+}
+
+function Est-FenetreDePartie($f) {
+  if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { return $false }
+  if ($f.Classe -eq "#32768" -or $f.Classe -like "*Tooltip*") { return $false }
+  return (Est-TitrePartie $f.Titre)
 }
 
 function Libelle-Fenetre($f) {
@@ -299,7 +278,6 @@ function Pids-Betclic($procs) {
 # l'arbre d'accessibilité de cette fenêtre et on y cherche les éléments nommés comme
 # une table (-MotifTable). Chaque nouvel élément = une table ouverte = une partie.
 $MotifsTable = @($MotifTable -split "\|" | Where-Object { $_ })
-$Exclusions = @($ExclureFenetres -split "\|" | Where-Object { $_ })
 $ProcessusSansTable = @("msedgewebview2", "chrome", "msedge")
 $MotifsDepart = @($MotifDepart -split "\|" | Where-Object { $_ })
 $script:uiaDisponible = $null
@@ -546,7 +524,7 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapi
   foreach ($p in Get-Process) { $noms[[int]$p.Id] = $p.ProcessName }
   $l = New-Object System.Collections.Generic.List[string]
   $l.Add("Diagnostic HUD Expresso Trainer version $Version — " + (Get-Date))
-  $l.Add("Réglages : -Processus '$Processus'  -FiltreTable '$FiltreTable'  -TailleMinTable $TailleMinTable  -DelaiDemarrage $DelaiDemarrage")
+  $l.Add("Réglages : -Processus '$Processus'  -MotifTable '$MotifTable'  -MotifDepart '$MotifDepart'  -TailleMinTable $TailleMinTable")
   $l.Add("")
   $l.Add("1. Processus reconnus comme Betclic : " + $procs.Count)
   foreach ($p in $procs) {
@@ -563,7 +541,7 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapi
   $fenetresBetclic = @(Lister-Fenetres | Where-Object { $pids.ContainsKey($_.ProcId) })
   if ($fenetresBetclic.Count -eq 0) { $l.Add("   (aucune)") }
   foreach ($f in $fenetresBetclic) {
-    $table = if (Est-Table $f $fenetresBetclic) { "TABLE ?" } else { "ignorée" }
+    $table = if (Est-FenetreDePartie $f) { "PARTIE" } else { "ignorée" }
     $l.Add("   " + $table + "  " + (Libelle-Fenetre $f) + "  hwnd " + $f.Hwnd)
     foreach ($e in [FenetresWin]::ListerEnfants([int64]$f.Hwnd)) {
       $q = $e -split "`t", 5
@@ -703,13 +681,8 @@ $script:etat = @{
   betclicVu = $false
   momentDetection = Get-Date
   connues = @{}              # hwnd → titre des fenêtres de Betclic déjà vues
-  tablesUia = @{}            # clé d'élément → nom des tables lues dans la fenêtre (UI Automation)
-  uiaBaseline = 0            # passages UIA de référence effectués (les tables déjà ouvertes ne comptent pas)
-  uiaClesPrecedentes = ""
-  uiaProuve = $false         # UIA a déjà trouvé des tables : on ne compte plus les fenêtres à part
-  uiaNombre = 0              # nombre d'éléments « table » de référence (règle nombre)
-  fenetresTables = @{}       # hwnd des fenêtres comptées comme tables (non relues à l'intérieur)
-  uiaCandidat = $null        # nombre vu à la lecture précédente, en attente de confirmation
+  comptees = @{}             # hwnd → moment où la fenêtre a été comptée comme partie
+  niveau1 = @{}              # hwnd → état de la lecture intérieure (niveau 1 affiché ?)
   passage = 0
   tablesVues = 0
   quitter = $false
@@ -797,6 +770,111 @@ function Format-Chrono([int64]$ms) {
   $t = [TimeSpan]::FromMilliseconds([Math]::Max(0, $ms))
   if ($t.TotalHours -ge 1) { return ("{0}:{1:00}:{2:00}" -f [int][Math]::Floor($t.TotalHours), $t.Minutes, $t.Seconds) }
   return ("{0}:{1:00}" -f $t.Minutes, $t.Seconds)
+}
+
+# ======================================================= détection des parties
+# Une partie = une fenêtre de table qui apparaît avec un titre de partie (-MotifTable), ou une
+# fenêtre existante dont le titre devient un titre de partie. En complément, lecture intérieure
+# (MSAA, en arrière-plan) des fenêtres de partie : le niveau de blinds 1 (-MotifDepart) qui
+# apparaît signale un nouveau départ dans une fenêtre réutilisée.
+function Compter-Partie-Fenetre([string]$hwnd, [string]$origine) {
+  $script:etat.tablesVues += 1
+  $script:etat.comptees[$hwnd] = Get-Date
+  Ajouter-Partie 1 $origine
+}
+
+$script:runspaceLecture = $null
+$script:lectureEnCours = $null
+$script:derniereLecture = [datetime]::MinValue
+
+function Texte-Niveau1-Present($lignes) {
+  foreach ($ligne in $lignes) {
+    $p = $ligne -split "`t", 5
+    foreach ($t in @($p[3], $p[4])) {
+      if (-not $t) { continue }
+      $n = ($t -replace "\s+", " ").Trim()
+      foreach ($m in $MotifsDepart) { if ($n -like $m) { return $true } }
+    }
+  }
+  return $false
+}
+
+function Traiter-Lecture($resultat) {
+  # resultat : hwnd → lignes MSAA. Par fenêtre : deux lectures de référence (l'arbre d'accessibilité
+  # se construit à la première), puis une apparition du niveau 1 confirmée par la lecture suivante
+  # = nouvelle partie, sauf si la fenêtre vient d'être comptée par son titre (même partie).
+  foreach ($h in @($resultat.Keys)) {
+    $lignes = @($resultat[$h])
+    $present = Texte-Niveau1-Present $lignes
+    $titre = if ($script:etat.connues.ContainsKey($h)) { $script:etat.connues[$h] } else { "hwnd " + $h }
+    if (-not $script:etat.niveau1.ContainsKey($h)) {
+      $script:etat.niveau1[$h] = @{ present = $present; candidat = $false; lectures = 1 }
+      Journal ("Lecture intérieure de « " + $titre + " » : " + $lignes.Count + " nœud(s), niveau 1 " + $(if ($present) { "affiché" } else { "absent" }) + " (référence).")
+      continue
+    }
+    $e = $script:etat.niveau1[$h]
+    $e.lectures += 1
+    if ($e.lectures -le 2) { $e.present = $present; $e.candidat = $false; continue }
+    if ($present -and -not $e.present) {
+      if ($e.candidat) {
+        $e.present = $true
+        $e.candidat = $false
+        $recent = $script:etat.comptees[$h]
+        if ($recent -and ((Get-Date) - $recent).TotalSeconds -lt $DelaiMemePartie) {
+          Journal ("Niveau 1 affiché dans « " + $titre + " » : partie déjà comptée.")
+        } else {
+          Journal ("Nouvelle partie (niveau 1 affiché) dans « " + $titre + " ».")
+          Compter-Partie-Fenetre $h "niveau 1"
+        }
+      } else {
+        $e.candidat = $true
+      }
+    } elseif (-not $present) {
+      $e.present = $false
+      $e.candidat = $false
+    }
+  }
+}
+
+function Lecture-Interieure($fenetres) {
+  # Lance (toutes les 12 s) une lecture MSAA des fenêtres de partie dans un espace d'exécution
+  # séparé, et traite le résultat de la lecture précédente : le HUD ne gèle jamais.
+  if (-not (Initialiser-Msaa)) { return }
+  if ($script:lectureEnCours) {
+    if (-not $script:lectureEnCours.handle.IsCompleted) { return }
+    $resultat = $null
+    try { $resultat = $script:lectureEnCours.ps.EndInvoke($script:lectureEnCours.handle) } catch { Journal ("Lecture intérieure : " + $_.Exception.Message) }
+    try { $script:lectureEnCours.ps.Dispose() } catch {}
+    $script:lectureEnCours = $null
+    if ($resultat -and $resultat.Count -gt 0 -and $resultat[0]) { Traiter-Lecture $resultat[0] }
+  }
+  if (((Get-Date) - $script:derniereLecture).TotalSeconds -lt 12) { return }
+  $cibles = @($fenetres | Where-Object { Est-FenetreDePartie $_ } | ForEach-Object { $_.Hwnd })
+  if ($cibles.Count -eq 0) { return }
+  if (-not $script:runspaceLecture) {
+    $script:runspaceLecture = [runspacefactory]::CreateRunspace()
+    $script:runspaceLecture.ApartmentState = "MTA"
+    $script:runspaceLecture.ThreadOptions = "ReuseThread"
+    $script:runspaceLecture.Open()
+  }
+  $ps = [powershell]::Create()
+  $ps.Runspace = $script:runspaceLecture
+  [void]$ps.AddScript({
+    param($hwnds, $max, $budget)
+    $r = @{}
+    foreach ($h in $hwnds) {
+      $lignes = New-Object System.Collections.Generic.List[string]
+      foreach ($l in [MsaaWin]::Lister([int64]$h, $max, $budget)) { $lignes.Add($l) }
+      foreach ($e in [FenetresWin]::ListerEnfants([int64]$h)) {
+        $he = ($e -split "`t", 5)[0]
+        foreach ($l in [MsaaWin]::Lister([int64]$he, $max, $budget)) { $lignes.Add($l) }
+      }
+      $r[$h] = $lignes
+    }
+    return $r
+  }).AddArgument($cibles).AddArgument(3000).AddArgument(700)
+  $script:lectureEnCours = @{ ps = $ps; handle = $ps.BeginInvoke() }
+  $script:derniereLecture = Get-Date
 }
 
 # ======================================================= fenêtre WPF
@@ -919,6 +997,8 @@ function Ranger-Hud {
 function Quitter {
   $script:etat.quitter = $true
   Sauver-Session
+  try { if ($script:lectureEnCours) { $script:lectureEnCours.ps.Stop() } } catch {}
+  try { if ($script:runspaceLecture) { $script:runspaceLecture.Close() } } catch {}
   try { $window.Close() } catch {}
   [System.Windows.Threading.Dispatcher]::CurrentDispatcher.InvokeShutdown()
 }
@@ -1013,12 +1093,8 @@ function Passage-Veille {
       if ($script:etat.betclicVu) {
         $script:etat.betclicVu = $false
         $script:etat.connues = @{}
-        $script:etat.tablesUia = @{}
-        $script:etat.uiaBaseline = 0
-        $script:etat.uiaClesPrecedentes = ""
-        $script:etat.uiaNombre = 0
-        $script:etat.uiaCandidat = $null
-        $script:etat.fenetresTables = @{}
+        $script:etat.niveau1 = @{}
+        $script:etat.comptees = @{}
         Journal "Betclic fermé."
         if ($Veille) { $window.Hide() }
         Rafraichir
@@ -1036,12 +1112,6 @@ function Passage-Veille {
       Sauver-Session
       Afficher-Hud
     }
-    # Fenêtres de démarrage (connexion, lobby) : pendant DelaiDemarrage secondes après le
-    # lancement du processus Betclic lui-même, pas après celui du HUD.
-    $debutBetclic = $null
-    foreach ($p in $procs) { try { if (-not $debutBetclic -or $p.StartTime -lt $debutBetclic) { $debutBetclic = $p.StartTime } } catch {} }
-    if (-not $debutBetclic) { $debutBetclic = $script:etat.momentDetection }
-    $demarrage = ((Get-Date) - $debutBetclic).TotalSeconds -lt $DelaiDemarrage
     $pids = Pids-Betclic $procs
     $nomsProc = @{}
     foreach ($p in $procs) { $nomsProc[[int]$p.Id] = $p.ProcessName.ToLower() }
@@ -1052,116 +1122,37 @@ function Passage-Veille {
     foreach ($f in $fenetres) {
       $presentes[$f.Hwnd] = $true
       if ($script:etat.connues.ContainsKey($f.Hwnd)) {
-        if ($CompterTitres -and $script:etat.connues[$f.Hwnd] -ne $f.Titre -and -not $demarrage -and (Est-Table $f $fenetres)) {
-          $script:etat.tablesVues += 1
-          Journal ("Table (nouveau titre) : " + (Libelle-Fenetre $f))
-          Ajouter-Partie 1 "table"
+        $ancien = $script:etat.connues[$f.Hwnd]
+        if ($ancien -ne $f.Titre) {
+          $script:etat.connues[$f.Hwnd] = $f.Titre
+          if (Est-TitrePartie $f.Titre) {
+            Journal ("Nouvelle partie dans une fenêtre existante : « " + $ancien + " » → « " + $f.Titre + " »")
+            Compter-Partie-Fenetre $f.Hwnd "fenêtre renommée"
+          } elseif ((Est-TitrePartie $ancien) -or $f.Largeur -ge $TailleMinTable) {
+            Journal ("Titre changé : « " + $ancien + " » → « " + $f.Titre + " »")
+          }
         }
-        $script:etat.connues[$f.Hwnd] = $f.Titre
         continue
       }
       $script:etat.connues[$f.Hwnd] = $f.Titre
       if ($premierPassage) {
         Journal ("Fenêtre déjà ouverte, non comptée : " + (Libelle-Fenetre $f))
-      } elseif ($demarrage) {
-        Journal ("Fenêtre de démarrage de Betclic, non comptée : " + (Libelle-Fenetre $f))
-      } elseif (Est-Table $f $fenetres) {
-        if ($ModeTables -eq "uia") {
-          Journal ("Nouvelle fenêtre (mode uia : non comptée) : " + (Libelle-Fenetre $f))
-        } else {
-          $script:etat.tablesVues += 1
-          $script:etat.fenetresTables[$f.Hwnd] = $true
-          Journal ("Table détectée (fenêtre) : " + (Libelle-Fenetre $f))
-          Ajouter-Partie 1 "table"
-        }
-      } else {
-        Journal ("Nouvelle fenêtre ignorée (trop petite ou hors filtre) : " + (Libelle-Fenetre $f))
+      } elseif (Est-FenetreDePartie $f) {
+        Journal ("Table détectée : " + (Libelle-Fenetre $f))
+        Compter-Partie-Fenetre $f.Hwnd "fenêtre"
+      } elseif ($f.Largeur -ge $TailleMinTable -and $f.Hauteur -ge $TailleMinTable) {
+        Journal ("Nouvelle fenêtre, non comptée (titre hors -MotifTable) : " + (Libelle-Fenetre $f))
       }
     }
-    foreach ($cle in @($script:etat.connues.Keys)) { if (-not $presentes.ContainsKey($cle)) { $script:etat.connues.Remove($cle); $script:etat.fenetresTables.Remove($cle) } }
-
-    # ---- tables à l'intérieur des fenêtres (UI Automation + MSAA), un passage sur deux (≈ 6 s).
-    # Les fenêtres déjà comptées comme tables ne sont pas relues (pas de double compte).
-    $script:etat.passage += 1
-    if ($ModeTables -ne "fenetres" -and ($script:etat.passage % 2 -eq 0)) {
-      $chrono = [System.Diagnostics.Stopwatch]::StartNew()
-      $elements = New-Object System.Collections.Generic.List[object]
-      $lus = 0
-      foreach ($f in $fenetres) {
-        if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
-        if ($script:etat.fenetresTables.ContainsKey($f.Hwnd)) { continue }
-        try { foreach ($e in (Elements-Tables $f.Hwnd)) { $elements.Add($e) } } catch { Journal ("Lecture intérieure : " + $_.Exception.Message) }
-        $lus += $script:uiaElementsVus + $script:msaaElementsVus
-      }
-      $script:uiaElementsVus = $lus
-      $genreVoulu = $(if ($RegleUia -eq "depart") { "depart" } else { "table" })
-      $elements = @($elements | Where-Object { $_.Genre -eq $genreVoulu })
-      $nombre = Compter-Elements $elements $genreVoulu
-      $cles = ($elements | ForEach-Object { $_.Cle } | Sort-Object) -join ","
-      # Référence : deux lectures identiques de suite (l'arbre d'accessibilité se construit à la première lecture).
-      if ($script:etat.uiaBaseline -lt 2) {
-        if ($cles -eq $script:etat.uiaClesPrecedentes) { $script:etat.uiaBaseline += 1 } else { $script:etat.uiaBaseline = 0 }
-        $script:etat.uiaClesPrecedentes = $cles
-        if ($script:etat.uiaBaseline -eq 0 -or $script:etat.uiaBaseline -eq 2) {
-          Journal ("Lecture intérieure (règle $RegleUia) : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $nombre + " élément(s) déjà présent(s), non compté(s)" + ($(if ($elements.Count) { " : " + (($elements | ForEach-Object { $_.Nom + " [" + $_.Type + ", " + $_.Source + "]" }) -join ", ") } else { "" })))
-        }
-        $script:etat.tablesUia = @{}
-        foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
-        $script:etat.uiaNombre = $nombre
-        $script:etat.uiaCandidat = $null
-        if ($elements.Count -gt 0) { $script:etat.uiaProuve = $true }
-      } elseif ($RegleUia -eq "nombre" -or $RegleUia -eq "depart") {
-        # Une partie quand le nombre d'éléments (« table », ou « début de partie » = niveau de blinds 1)
-        # dépasse la référence à deux lectures de suite ; un rafraîchissement de l'interface qui recrée
-        # les mêmes éléments ne change pas le nombre.
-        $n = $nombre
-        if ($n -lt $script:etat.uiaNombre) {
-          Journal ("UIA : " + $script:etat.uiaNombre + " → " + $n + " élément(s) (" + $(if ($RegleUia -eq "depart") { "fin du niveau 1 ou table fermée" } else { "table fermée" }) + ").")
-          $script:etat.uiaNombre = $n
-          $script:etat.uiaCandidat = $null
-        } elseif ($n -gt $script:etat.uiaNombre) {
-          if ($script:etat.uiaCandidat -eq $n) {
-            $delta = $n - $script:etat.uiaNombre
-            $script:etat.uiaNombre = $n
-            $script:etat.uiaCandidat = $null
-            $script:etat.uiaProuve = $true
-            $noms = ($elements | ForEach-Object { $_.Nom + " [" + $_.Type + ", " + $_.Source + "]" }) -join ", "
-            if ($demarrage) {
-              Journal ("Tables (UIA) pendant le démarrage de Betclic, non comptées : " + $noms)
-            } else {
-              $script:etat.tablesVues += $delta
-              Journal ("UIA : " + ($n - $delta) + " → " + $n + " élément(s), +" + $delta + " partie(s) : " + $noms)
-              Ajouter-Partie $delta "table"
-            }
-          } else {
-            $script:etat.uiaCandidat = $n
-            Journal ("UIA : " + $script:etat.uiaNombre + " → " + $n + " élément(s) vu une fois, confirmation à la prochaine lecture.")
-          }
-        } else {
-          $script:etat.uiaCandidat = $null
-        }
-        $script:etat.tablesUia = @{}
-        foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
-      } else {
-        $presentesUia = @{}
-        foreach ($e in $elements) {
-          $presentesUia[$e.Cle] = $true
-          if ($script:etat.tablesUia.ContainsKey($e.Cle)) { continue }
-          $script:etat.tablesUia[$e.Cle] = $e.Nom
-          $script:etat.uiaProuve = $true
-          if ($demarrage) {
-            Journal ("Table (UIA) pendant le démarrage de Betclic, non comptée : " + $e.Nom)
-          } else {
-            $script:etat.tablesVues += 1
-            Journal ("Table détectée (UIA) : " + $e.Nom + " [" + $e.Type + ", " + $e.Classe + "]")
-            Ajouter-Partie 1 "table"
-          }
-        }
-        foreach ($cle in @($script:etat.tablesUia.Keys)) { if (-not $presentesUia.ContainsKey($cle)) { Journal ("Table fermée (UIA) : " + $script:etat.tablesUia[$cle]); $script:etat.tablesUia.Remove($cle) } }
+    foreach ($cle in @($script:etat.connues.Keys)) {
+      if (-not $presentes.ContainsKey($cle)) {
+        if (Est-TitrePartie $script:etat.connues[$cle]) { Journal ("Fenêtre de table fermée : « " + $script:etat.connues[$cle] + " »") }
+        $script:etat.connues.Remove($cle)
+        $script:etat.niveau1.Remove($cle)
+        $script:etat.comptees.Remove($cle)
       }
     }
-
-    # ---- historiques de mains sur le disque
+    if (-not $SansLectureInterieure) { Lecture-Interieure $fenetres }
     if ($DossierHistoriques) {
       foreach ($id in (Scanner-Historiques)) {
         Journal ("Partie détectée (historique) : " + $id)
@@ -1189,7 +1180,7 @@ $timerVeille.Add_Tick({ Passage-Veille })
 $timerVeille.Start()
 
 if ($Veille) {
-  Journal ("Veille démarrée (version $Version) : processus '$Processus', règle $RegleUia, début de partie '" + ($MotifsDepart -join " | ") + "', table '" + ($MotifsTable -join " | ") + "', mode $ModeTables" + ($(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" })) + ", dossier $Dossier")
+  Journal ("Veille démarrée (version $Version) : processus '$Processus', titres de partie '" + ($MotifsTable -join " | ") + "', niveau 1 '" + ($MotifsDepart -join " | ") + "'" + $(if ($SansLectureInterieure) { ", sans lecture intérieure" } else { "" }) + $(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" }) + ", dossier $Dossier")
   Passage-Veille
 } else {
   Journal "HUD ouvert (version $Version)."

@@ -40,38 +40,29 @@ Autres commandes
    la même chose en PowerShell : & "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Desinstaller)
 
 Comment les parties sont comptées
-  Recommandé : dans Betclic, Paramètres → « Afficher les tables dans des fenêtres indépendantes » (bêta).
-  Chaque table devient alors une vraie fenêtre Windows, et chaque nouvelle fenêtre de table = une partie.
-  Les fenêtres qui ne sont jamais des tables sont ignorées (lobby « Betclic Poker », « Betclic Poker
-  Playground », sélecteur de fichiers, captcha, menus) : réglable avec -ExclureFenetres.
-  En complément, le HUD lit l'intérieur des autres fenêtres (UI Automation et MSAA, lecture seule) :
-  quand le niveau de blinds 1 « 10 - 20 » apparaît et reste à la lecture suivante, une partie commence.
-  Le client Betclic est une application Flutter qui n'expose pas toujours ses textes : si rien n'est
-  compté sans l'option ci-dessus, active-la.
+  Indispensable : dans Betclic, Paramètres → « Afficher les tables dans des fenêtres indépendantes » (bêta).
+  Chaque table est alors une fenêtre titrée « Spin & Rush - 0,20€ » (par exemple). Une fenêtre qui
+  apparaît avec un tel titre, ou dont le titre le devient (une fenêtre « Betclic Poker Table » qui
+  passe à « Spin & Rush… »), c'est une partie, à tout moment. Le lobby, le sélecteur de fichiers, le
+  captcha et les menus ne comptent jamais : seuls les titres de -MotifTable comptent.
+  En complément, le HUD lit en arrière-plan l'intérieur des fenêtres de table (MSAA, lecture seule) :
+  si le niveau de blinds 1 « 10 - 20 » réapparaît dans une fenêtre réutilisée, c'est une nouvelle partie.
 
-Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush - *")
+Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush*")
   -Processus "*betclic*"    nom du processus du client (Gestionnaire des tâches → Détails)
-  -MotifTable "Spin & Rush - *|Expresso*"   noms d'éléments qui signalent une table (séparés par |)
-  -ModeTables auto          auto (fenêtres de table + lecture intérieure), fenetres ou uia (un seul canal)
-  -ExclureFenetres "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*"   fenêtres jamais tables
-  -MotifDepart "10 - 20|10-20|10 / 20"   texte visible seulement au début d'une partie (niveau 1)
-  -RegleUia depart          depart (par défaut) ; nombre : +1 quand le nombre d'éléments -MotifTable augmente ;
-                            ids : chaque nouvel élément -MotifTable compte (plus de faux positifs)
-  -DossierHistoriques "<chemin>"   si le client écrit ses historiques de mains sur le disque,
-                            chaque nouveau « Game ID » compte une partie (le plus fiable quand ça existe)
-  -FiltreTable "*"          fenêtres à part : ne compter que celles dont le titre correspond
-  -CompterTitres            si Betclic réutilise la même fenêtre pour la partie suivante
-  -DelaiDemarrage 30        secondes après le lancement de Betclic où rien n'est compté
+  -MotifTable "Spin & Rush*|Expresso*|Spin & Go*"   titres des fenêtres de table (séparés par |)
+  -MotifDepart "10 - 20|10-20|10 / 20"   texte du niveau de blinds 1 (lecture intérieure)
+  -SansLectureInterieure    ne compter que par les titres de fenêtres
+  -DelaiMemePartie 90       secondes après une partie comptée où le niveau 1 de la même fenêtre ne recompte pas
+  -TailleMinTable 300       taille minimale d'une fenêtre de table
   -PauseMax 120             minutes sans activité avant une nouvelle session
+  -DossierHistoriques "<chemin>"   si le client écrit ses historiques de mains sur le disque
   -Dossier "<chemin>"       où écrire session, sessions.csv et journal.log
 
-Une table n'est pas comptée, ou comptée à tort ?
-  1. Clic droit sur le HUD → « Mettre à jour le HUD » (ou recolle la commande d'installation).
-  2. Avec une table ouverte : clic droit → « Copier journal + diagnostic », puis colle (Ctrl+V) dans la
-     conversation avec Claude. Tout y est : journal, processus reconnus, éléments d'interface vus.
-     En ligne de commande : powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Copier
-  Pistes : partie « 1. » vide → le processus ne s'appelle pas betclic, utiliser -Processus "*nom*" ;
-  la table apparaît en « enfant » d'une fenêtre → tables intégrées, à signaler ; table « ignorée » → -TailleMinTable ou -FiltreTable.
+Une partie n'est pas comptée, ou comptée à tort ?
+  1. Clic droit sur le HUD → « Mettre à jour le HUD ».
+  2. Pendant une partie : clic droit → « Copier journal + diagnostic », puis colle (Ctrl+V) dans la
+     conversation avec Claude. Tout y est : journal, fenêtres vues avec leur titre, textes lus à l'intérieur.
 
 Fichiers (par défaut dans %LOCALAPPDATA%\Expresso Trainer, ex. C:\Users\toi\AppData\Local\Expresso Trainer)
   journal.log     tout ce que le HUD voit : chaque fenêtre de Betclic avec son titre et sa taille.
