@@ -248,6 +248,8 @@ test("session HUD : chrono, compteur, détection, archive", async () => {
   // ids de parties dans un texte d'historique
   const ids = s.idsPartiesDuTexte("*** HEADER ***\nHand ID: 1\nGame ID: 777\n----\n*** HEADER ***\nHand ID: 2\nGame ID: 777\n----\nGame ID: 778 \n");
   assert.deepEqual([...ids], ["777", "778"]);
+  // ligne finale non terminée (fichier en cours d'écriture) : ignorée jusqu'au prochain passage
+  assert.deepEqual([...s.idsPartiesDuTexte("Game ID: 1\nGame ID: 2")], ["1"]);
 });
 
 test("surveillance du dossier : fichiers existants ignorés, nouvelles parties comptées", async () => {

@@ -17,6 +17,7 @@ import { dateHeure, pluriel } from "../lib/format.js";
 import { formatHeures } from "../lib/heures.js";
 
 const INTERVALLE_SCAN_MS = 5000;
+const URL_HUD_WINDOWS = "https://theclearboy.github.io/spinall/hud-betclic.zip";
 const CLE_DOSSIER = "dossierHud";
 const DOSSIER_VIDE = { etat: "aucun", nom: null, nbFichiers: 0, nbSuivis: 0, dernier: null, erreur: null, detectees: 0 };
 
@@ -297,7 +298,17 @@ export function SessionHud({ actif, session, setSession, sessions, setSessions }
           </p>
         </Tuile>
 
-        <Tuile variante="sombre" span={4} titre="HUD flottant" sous="une petite fenêtre qui reste au-dessus des tables">
+        <Tuile
+          variante="sombre"
+          span={4}
+          titre="HUD flottant"
+          sous="une petite fenêtre qui reste au-dessus des tables"
+          action={
+            <a className="pilule pilule--blanc" href={URL_HUD_WINDOWS} title="Version Windows autonome, sans navigateur : s'ouvre avec Betclic et compte les tables">
+              Version Windows
+            </a>
+          }
+        >
           <div className="hud-apercu">
             <Hud session={session} maintenant={maintenant} onPlus={plus} onMoins={moins} />
           </div>
@@ -315,6 +326,9 @@ export function SessionHud({ actif, session, setSession, sessions, setSessions }
             {pipDisponible()
               ? "Fenêtre toujours visible, même au-dessus du client Betclic. Touches + / Entrée et − dans la fenêtre."
               : "Ici, le HUD s'ouvre dans une fenêtre séparée classique ; pour une fenêtre toujours au-dessus des tables, utilise Chrome ou Edge sur ordinateur."}
+            {" "}
+            Sur PC, la <a href={URL_HUD_WINDOWS}>version Windows</a> (zip) se lance avec Betclic, sans navigateur, et compte les
+            tables toute seule.
           </p>
           {message && <p className="muet">{message}</p>}
         </Tuile>

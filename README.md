@@ -28,6 +28,35 @@ npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 
 ## HUD de session
 
+Deux HUD, au choix.
+
+### HUD Windows autonome (`outils/windows/`, sans navigateur)
+
+Un script PowerShell + WPF, rien à installer : `hud-betclic.ps1` et ses lanceurs
+`.cmd`, empaquetés en `hud-betclic.zip` à chaque build (`scripts/empaqueter-outils.mjs`
+→ `public/`, servi sur https://theclearboy.github.io/spinall/hud-betclic.zip).
+
+- Petite fenêtre noire toujours au-dessus : chrono depuis le premier lancement
+  de table, parties (+1 / −1, touches + / Entrée / −), cadence, clic droit → menu.
+- `installer-hud-betclic.cmd` : veille lancée tout de suite et à chaque démarrage
+  de Windows. Dès que le processus Betclic tourne (`-Processus "*betclic*"`, ou
+  une fenêtre principale « Betclic »), le HUD apparaît ; il se range quand Betclic
+  se ferme.
+- Détection des parties : chaque nouvelle fenêtre de table de Betclic (visible,
+  titrée, ≥ 300 × 300 px, hors 30 s de démarrage) compte +1 et lance le chrono.
+  Réglages `-FiltreTable`, `-CompterTitres`, `-DelaiDemarrage`, `-TailleMinTable`.
+- Fichiers dans `%LOCALAPPDATA%\Expresso Trainer` : `session.json` (session en
+  cours, reprise au redémarrage ; nouvelle session après `-PauseMax` 120 min sans
+  activité), `sessions.csv` (archive), `journal.log` (chaque fenêtre vue, pour
+  ajuster le filtre), `position.json`.
+- `hud-betclic.cmd` ouvre le HUD maintenant ; si une veille tourne déjà, il lui
+  demande d'afficher sa fenêtre (fichier `afficher.signal`).
+
+Non testé ici (pas de Windows) : vérifier d'abord avec `hud-betclic.cmd -Veille`
+dans une console visible que les tables sont bien détectées.
+
+### Onglet HUD du site
+
 L'onglet **HUD** suit une session de jeu : chrono depuis le premier lancement de
 table, nombre de parties jouées et cadence (parties / heure).
 

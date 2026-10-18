@@ -62,8 +62,10 @@ export function terminer(session, sessions, maintenant = Date.now()) {
 /** Ids de parties (« Game ID ») présents dans un texte d'historique, sans le parser entièrement. */
 export function idsPartiesDuTexte(texte) {
   const ids = new Set();
+  // Un fichier en cours d'écriture peut se terminer par une ligne incomplète : on l'ignore.
+  const complet = texte.endsWith("\n") ? texte : texte.slice(0, texte.lastIndexOf("\n") + 1);
   const regex = /^Game ID: (.+?)\s*$/gm;
   let m;
-  while ((m = regex.exec(texte))) ids.add(m[1]);
+  while ((m = regex.exec(complet))) ids.add(m[1]);
   return ids;
 }
