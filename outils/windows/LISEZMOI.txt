@@ -58,12 +58,11 @@ Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -Motif
   -PauseMax 120             minutes sans activité avant une nouvelle session
   -Dossier "<chemin>"       où écrire session, sessions.csv et journal.log
 
-Une table n'est pas comptée ?
-  1. Relance la commande d'installation ci-dessus (elle met le HUD à jour et le redémarre).
-  2. Ouvre une table dans Betclic, puis colle dans PowerShell :
-       powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Diagnostic
-     Le Bloc-notes s'ouvre avec diagnostic.txt : processus reconnus, fenêtres vues avec titre, classe et taille.
-     Envoie ce texte (et journal.log) pour faire régler le filtre.
+Une table n'est pas comptée, ou comptée à tort ?
+  1. Clic droit sur le HUD → « Mettre à jour le HUD » (ou recolle la commande d'installation).
+  2. Avec une table ouverte : clic droit → « Copier journal + diagnostic », puis colle (Ctrl+V) dans la
+     conversation avec Claude. Tout y est : journal, processus reconnus, éléments d'interface vus.
+     En ligne de commande : powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Copier
   Pistes : partie « 1. » vide → le processus ne s'appelle pas betclic, utiliser -Processus "*nom*" ;
   la table apparaît en « enfant » d'une fenêtre → tables intégrées, à signaler ; table « ignorée » → -TailleMinTable ou -FiltreTable.
 

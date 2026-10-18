@@ -19,6 +19,10 @@
                                     relancée à chaque démarrage de Windows
     desinstaller-hud-betclic.cmd    retire la veille du démarrage et l'arrête
 
+  Clic droit sur le HUD → « Copier journal + diagnostic » met tout ce qu'il faut dans le
+  presse-papiers (à coller à Claude) ; « Mettre à jour le HUD » installe la dernière version.
+  En ligne de commande : -Copier, -MettreAJour.
+
   Si une table n'est pas comptée : avec une table ouverte, lancer
     powershell -NoProfile -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Expresso Trainer\hud-betclic.ps1" -Diagnostic
   → diagnostic.txt s'ouvre dans le Bloc-notes avec tout ce que le HUD voit (processus, fenêtres, titres, tailles).
@@ -54,6 +58,8 @@ param(
   [switch]$Installer,
   [switch]$Desinstaller,
   [switch]$Diagnostic,
+  [switch]$Copier,
+  [switch]$MettreAJour,
   [switch]$CompterTitres,
   [string]$Processus = "*betclic*",
   [string]$FiltreTable = "*",
@@ -78,6 +84,7 @@ trap {
 $NomRaccourci = "HUD Expresso Trainer.lnk"
 $DossierParDefaut = Join-Path $env:LOCALAPPDATA "Expresso Trainer"
 $UrlSite = "https://theclearboy.github.io/spinall/"
+$UrlScript = "https://theclearboy.github.io/spinall/hud-betclic.ps1.txt"
 $Navigateurs = @("chrome", "msedge", "firefox", "opera", "brave", "vivaldi", "iexplore")
 
 if (-not (Test-Path $Dossier)) { New-Item -ItemType Directory -Path $Dossier | Out-Null }
@@ -156,7 +163,12 @@ function Desinstaller-Demarrage {
 
 if ($Desinstaller) { Desinstaller-Demarrage; return }
 if ($Installer) { Installer-Demarrage; return }
-if ($Diagnostic) { Diagnostic; return }
+if ($Diagnostic) { [void](Diagnostic); return }
+if ($Copier) {
+  if (Copier-Pour-Claude) { Write-Host "Copié : colle maintenant (Ctrl+V) dans la conversation avec Claude." }
+  return
+}
+if ($MettreAJour) { Mettre-A-Jour; return }
 
 # Lancement direct alors qu'une veille tourne déjà : on lui demande d'afficher sa fenêtre.
 $FichierAfficher = Join-Path $Dossier "afficher.signal"
@@ -372,7 +384,7 @@ function Scanner-Historiques {
   return $nouvelles
 }
 
-function Diagnostic {
+function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500) {
   $procs = Processus-Betclic
   $pids = Pids-Betclic $procs
   $noms = @{}
@@ -413,7 +425,7 @@ function Diagnostic {
       $l.Add("   Fenêtre " + (Libelle-Fenetre $f) + " : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $tables.Count + " correspondant à un motif de table :")
       foreach ($t in $tables) { $l.Add("      TABLE : " + $t.Nom + " [" + $t.Type + ", " + $t.Classe + ", id " + $t.Cle + "]") }
       $l.Add("   Arbre (type | classe | id | nom) :")
-      Dump-Uia $f.Hwnd $l
+      Dump-Uia $f.Hwnd $l $TailleArbre
     }
   } else { $l.Add("   (UI Automation indisponible)") }
   $l.Add("")
@@ -456,7 +468,36 @@ function Diagnostic {
   $fichier = Join-Path $Dossier "diagnostic.txt"
   $l | Set-Content -Path $fichier -Encoding UTF8
   Journal "Diagnostic écrit dans $fichier"
-  Start-Process notepad.exe $fichier
+  if (-not $Silencieux) { Start-Process notepad.exe $fichier }
+  return ($l -join "`r`n")
+}
+
+# Journal (dernières lignes) + diagnostic dans le presse-papiers : il n'y a plus qu'à coller.
+function Copier-Pour-Claude {
+  $journal = ""
+  $cheminJournal = Join-Path $Dossier "journal.log"
+  if (Test-Path $cheminJournal) { $journal = (Get-Content -Path $cheminJournal -Encoding UTF8 | Select-Object -Last 150) -join "`r`n" }
+  $texte = "=== journal.log (dernières lignes) ===`r`n" + $journal + "`r`n`r`n=== diagnostic.txt ===`r`n" + (Diagnostic -Silencieux -TailleArbre 1500)
+  try {
+    Set-Clipboard -Value $texte
+    Journal ("Journal et diagnostic copiés dans le presse-papiers (" + $texte.Length + " caractères) : colle-les dans la conversation.")
+    return $true
+  } catch {
+    Journal ("Copie impossible : " + $_.Exception.Message)
+    return $false
+  }
+}
+
+# Télécharge la dernière version du script et réinstalle (la veille redémarre).
+function Mettre-A-Jour {
+  $cible = Join-Path $Dossier "hud-betclic.ps1"
+  $r = Invoke-WebRequest -UseBasicParsing -Uri $UrlScript
+  $t = [System.Text.Encoding]::UTF8.GetString($r.RawContentStream.ToArray()).TrimStart([char]0xFEFF)
+  if ($t -notlike "*hud-betclic.ps1*") { throw "téléchargement incomplet" }
+  [System.IO.File]::WriteAllText($cible, $t, (New-Object System.Text.UTF8Encoding $true))
+  Journal "Script mis à jour : $cible"
+  $args = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ('"' + $cible + '"'), "-Installer")
+  Start-Process -FilePath "powershell.exe" -ArgumentList ($args -join " ") -WindowStyle Hidden
 }
 
 function Processus-Betclic {
@@ -718,6 +759,13 @@ $menu = New-Object System.Windows.Controls.ContextMenu
 foreach ($entree in @(
   @{ texte = "Terminer la session (archive dans sessions.csv)"; action = { Terminer-Session } },
   @{ texte = "Remettre à zéro (sans archiver)"; action = { Remettre-A-Zero } },
+  @{ texte = "Copier journal + diagnostic (à coller à Claude)"; action = {
+      $window.Cursor = [System.Windows.Input.Cursors]::Wait
+      try { [void](Copier-Pour-Claude) } finally { $window.Cursor = $null }
+    } },
+  @{ texte = "Mettre à jour le HUD (dernière version)"; action = {
+      try { Mettre-A-Jour; $script:etat.quitter = $true } catch { Journal ("Mise à jour impossible : " + $_.Exception.Message) }
+    } },
   @{ texte = "Ouvrir le dossier (journal, sessions)"; action = { Start-Process $Dossier } },
   @{ texte = "Ouvrir Expresso Trainer (site)"; action = { Start-Process $UrlSite } },
   @{ texte = "Quitter le HUD"; action = { Quitter } }
