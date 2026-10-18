@@ -58,8 +58,11 @@ Un script PowerShell + WPF, rien à installer : `hud-betclic.ps1` et ses lanceur
   commande PowerShell (voir `LISEZMOI.txt` ou l'onglet HUD du site). Smart App
   Control (Windows 11 récent) bloque tout script non signé : à désactiver.
 
-Non testé ici (pas de Windows) : vérifier d'abord avec `hud-betclic.cmd -Veille`
-dans une console visible que les tables sont bien détectées.
+Non testé ici (pas de Windows). Si une table n'est pas comptée : `-Diagnostic`
+écrit `diagnostic.txt` (processus reconnus et leurs fils, fenêtres visibles
+avec classe, taille et titre, fenêtres enfants, processus évoquant le poker)
+et l'ouvre dans le Bloc-notes. Le délai de démarrage se calcule depuis le
+lancement du processus Betclic (`StartTime`), pas depuis celui du HUD.
 
 ### Onglet HUD du site
 

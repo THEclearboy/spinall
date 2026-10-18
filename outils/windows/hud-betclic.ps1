@@ -19,6 +19,10 @@
                                     relancée à chaque démarrage de Windows
     desinstaller-hud-betclic.cmd    retire la veille du démarrage et l'arrête
 
+  Si une table n'est pas comptée : avec une table ouverte, lancer
+    powershell -NoProfile -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Expresso Trainer\hud-betclic.ps1" -Diagnostic
+  → diagnostic.txt s'ouvre dans le Bloc-notes avec tout ce que le HUD voit (processus, fenêtres, titres, tailles).
+
   Options (à ajouter après la commande, ex. : installer-hud-betclic.cmd -FiltreTable "*Expresso*") :
     -Processus "*betclic*"   nom du processus du client Betclic (joker * accepté ;
                              Gestionnaire des tâches → Détails si le client porte un autre nom)
@@ -39,6 +43,7 @@ param(
   [switch]$Veille,
   [switch]$Installer,
   [switch]$Desinstaller,
+  [switch]$Diagnostic,
   [switch]$CompterTitres,
   [string]$Processus = "*betclic*",
   [string]$FiltreTable = "*",
@@ -133,6 +138,7 @@ function Desinstaller-Demarrage {
 
 if ($Desinstaller) { Desinstaller-Demarrage; return }
 if ($Installer) { Installer-Demarrage; return }
+if ($Diagnostic) { Diagnostic; return }
 
 # Lancement direct alors qu'une veille tourne déjà : on lui demande d'afficher sa fenêtre.
 $FichierAfficher = Join-Path $Dossier "afficher.signal"
@@ -157,17 +163,40 @@ public static class FenetresWin {
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
+  [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumProc f, IntPtr l);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  static string Titre(IntPtr h) {
+    int n = GetWindowTextLength(h);
+    if (n == 0) return "";
+    var sb = new StringBuilder(n + 2);
+    GetWindowText(h, sb, sb.Capacity);
+    return sb.ToString();
+  }
+  static string Classe(IntPtr h) {
+    var sb = new StringBuilder(256);
+    GetClassName(h, sb, sb.Capacity);
+    return sb.ToString();
+  }
+  // "hwnd TAB pid TAB largeur TAB hauteur TAB classe TAB titre" pour chaque fenêtre visible (titrée ou non)
   public static List<string> Lister() {
     var liste = new List<string>();
     EnumWindows(delegate(IntPtr h, IntPtr l) {
       if (!IsWindowVisible(h)) return true;
-      int n = GetWindowTextLength(h);
-      if (n == 0) return true;
-      var sb = new StringBuilder(n + 2);
-      GetWindowText(h, sb, sb.Capacity);
       uint pid; GetWindowThreadProcessId(h, out pid);
       RECT r; GetWindowRect(h, out r);
-      liste.Add(h.ToInt64() + "\t" + pid + "\t" + (r.R - r.L) + "\t" + (r.B - r.T) + "\t" + sb.ToString());
+      liste.Add(h.ToInt64() + "\t" + pid + "\t" + (r.R - r.L) + "\t" + (r.B - r.T) + "\t" + Classe(h) + "\t" + Titre(h));
+      return true;
+    }, IntPtr.Zero);
+    return liste;
+  }
+  // Fenêtres enfants visibles d'au moins 100 px (diagnostic : tables intégrées dans la fenêtre principale ?)
+  public static List<string> ListerEnfants(long parent) {
+    var liste = new List<string>();
+    EnumChildWindows(new IntPtr(parent), delegate(IntPtr h, IntPtr l) {
+      if (!IsWindowVisible(h)) return true;
+      RECT r; GetWindowRect(h, out r);
+      if (r.R - r.L < 100 || r.B - r.T < 100) return true;
+      liste.Add(h.ToInt64() + "\t" + (r.R - r.L) + "\t" + (r.B - r.T) + "\t" + Classe(h) + "\t" + Titre(h));
       return true;
     }, IntPtr.Zero);
     return liste;
@@ -177,9 +206,90 @@ public static class FenetresWin {
 
 function Lister-Fenetres {
   [FenetresWin]::Lister() | ForEach-Object {
-    $p = $_ -split "`t", 5
-    [pscustomobject]@{ Hwnd = $p[0]; ProcId = [int]$p[1]; Largeur = [int]$p[2]; Hauteur = [int]$p[3]; Titre = $p[4] }
+    $p = $_ -split "`t", 6
+    [pscustomobject]@{ Hwnd = $p[0]; ProcId = [int]$p[1]; Largeur = [int]$p[2]; Hauteur = [int]$p[3]; Classe = $p[4]; Titre = $p[5] }
   }
+}
+
+function Est-Table($fenetre) {
+  if ($fenetre.Largeur -lt $TailleMinTable -or $fenetre.Hauteur -lt $TailleMinTable) { return $false }
+  if ($FiltreTable -eq "*") { return $true }
+  return ($fenetre.Titre -like $FiltreTable)
+}
+
+function Libelle-Fenetre($f) {
+  $titre = if ($f.Titre) { $f.Titre } else { "(sans titre)" }
+  return ($titre + " [" + $f.Classe + ", " + $f.Largeur + "x" + $f.Hauteur + "]")
+}
+
+# Processus reconnus + leurs processus fils (un client peut ouvrir ses tables dans un autre processus),
+# sans les navigateurs ni l'Explorateur qu'il aurait lancés.
+function Pids-Betclic($procs) {
+  $pids = @{}
+  foreach ($p in $procs) { $pids[[int]$p.Id] = $true }
+  try {
+    $tous = @(Get-CimInstance Win32_Process -Property ProcessId, ParentProcessId, Name)
+    $exclus = @("explorer.exe") + ($Navigateurs | ForEach-Object { $_ + ".exe" })
+    $ajout = $true
+    while ($ajout) {
+      $ajout = $false
+      foreach ($t in $tous) {
+        if ($pids.ContainsKey([int]$t.ParentProcessId) -and -not $pids.ContainsKey([int]$t.ProcessId) -and ($exclus -notcontains $t.Name.ToLower())) {
+          $pids[[int]$t.ProcessId] = $true
+          $ajout = $true
+        }
+      }
+    }
+  } catch {}
+  return $pids
+}
+
+function Diagnostic {
+  $procs = Processus-Betclic
+  $pids = Pids-Betclic $procs
+  $noms = @{}
+  foreach ($p in Get-Process) { $noms[[int]$p.Id] = $p.ProcessName }
+  $l = New-Object System.Collections.Generic.List[string]
+  $l.Add("Diagnostic HUD Expresso Trainer — " + (Get-Date))
+  $l.Add("Réglages : -Processus '$Processus'  -FiltreTable '$FiltreTable'  -TailleMinTable $TailleMinTable  -DelaiDemarrage $DelaiDemarrage")
+  $l.Add("")
+  $l.Add("1. Processus reconnus comme Betclic : " + $procs.Count)
+  foreach ($p in $procs) {
+    $debut = try { $p.StartTime.ToString("HH:mm:ss") } catch { "?" }
+    $l.Add("   " + $p.ProcessName + "  (pid " + $p.Id + ", démarré à " + $debut + ", fenêtre principale : " + $p.MainWindowTitle + ")")
+  }
+  $l.Add("   + processus fils suivis : " + (($pids.Keys | Where-Object { $noms.ContainsKey($_) } | ForEach-Object { $noms[$_] + " (" + $_ + ")" }) -join ", "))
+  $l.Add("")
+  $l.Add("2. Fenêtres visibles de ces processus (ce que le HUD compare pour compter les tables) :")
+  $fenetresBetclic = @(Lister-Fenetres | Where-Object { $pids.ContainsKey($_.ProcId) })
+  if ($fenetresBetclic.Count -eq 0) { $l.Add("   (aucune)") }
+  foreach ($f in $fenetresBetclic) {
+    $table = if (Est-Table $f) { "TABLE ?" } else { "ignorée" }
+    $l.Add("   " + $table + "  " + (Libelle-Fenetre $f) + "  hwnd " + $f.Hwnd)
+    foreach ($e in [FenetresWin]::ListerEnfants([int64]$f.Hwnd)) {
+      $q = $e -split "`t", 5
+      $l.Add("        enfant : " + (if ($q[4]) { $q[4] } else { "(sans titre)" }) + " [" + $q[3] + ", " + $q[1] + "x" + $q[2] + "]")
+    }
+  }
+  $l.Add("")
+  $l.Add("3. Processus dont le nom ou la fenêtre évoque le poker (si le 1. est vide, c'est là qu'on trouve le bon -Processus) :")
+  foreach ($p in Get-Process) {
+    $titre = ""
+    try { $titre = $p.MainWindowTitle } catch {}
+    if ($p.ProcessName -like "*poker*" -or $p.ProcessName -like "*betclic*" -or $p.ProcessName -like "*expresso*" -or $titre -like "*poker*" -or $titre -like "*betclic*" -or $titre -like "*expresso*") {
+      $l.Add("   " + $p.ProcessName + "  (pid " + $p.Id + ")  fenêtre principale : " + $titre)
+    }
+  }
+  $l.Add("")
+  $l.Add("4. Toutes les fenêtres visibles (processus | classe | taille | titre) :")
+  foreach ($f in Lister-Fenetres) {
+    $nom = if ($noms.ContainsKey($f.ProcId)) { $noms[$f.ProcId] } else { "pid " + $f.ProcId }
+    $l.Add("   " + $nom + " | " + $f.Classe + " | " + $f.Largeur + "x" + $f.Hauteur + " | " + $f.Titre)
+  }
+  $fichier = Join-Path $Dossier "diagnostic.txt"
+  $l | Set-Content -Path $fichier -Encoding UTF8
+  Journal "Diagnostic écrit dans $fichier"
+  Start-Process notepad.exe $fichier
 }
 
 function Processus-Betclic {
@@ -442,11 +552,6 @@ $window.Dispatcher.Add_UnhandledException({
 })
 
 # ======================================================= veille : Betclic et ses tables
-function Est-Table($fenetre) {
-  if ($fenetre.Largeur -lt $TailleMinTable -or $fenetre.Hauteur -lt $TailleMinTable) { return $false }
-  return ($fenetre.Titre -like $FiltreTable)
-}
-
 function Passage-Veille {
   try {
     if (Test-Path $FichierAfficher) {
@@ -469,15 +574,19 @@ function Passage-Veille {
       $script:etat.betclicVu = $true
       $script:etat.momentDetection = Get-Date
       $script:etat.tablesVues = 0
-      Journal ("Betclic détecté (processus " + $procs[0].ProcessName + ").")
+      Journal ("Betclic détecté : " + (($procs | ForEach-Object { $_.ProcessName + " (pid " + $_.Id + ")" }) -join ", ") + ".")
       Archiver-Si-Perimee
       $script:etat.derniereActivite = Maintenant-Ms
       Sauver-Session
       Afficher-Hud
     }
-    $demarrage = ((Get-Date) - $script:etat.momentDetection).TotalSeconds -lt $DelaiDemarrage
-    $pids = @{}
-    foreach ($p in $procs) { $pids[[int]$p.Id] = $true }
+    # Fenêtres de démarrage (connexion, lobby) : pendant DelaiDemarrage secondes après le
+    # lancement du processus Betclic lui-même, pas après celui du HUD.
+    $debutBetclic = $null
+    foreach ($p in $procs) { try { if (-not $debutBetclic -or $p.StartTime -lt $debutBetclic) { $debutBetclic = $p.StartTime } } catch {} }
+    if (-not $debutBetclic) { $debutBetclic = $script:etat.momentDetection }
+    $demarrage = ((Get-Date) - $debutBetclic).TotalSeconds -lt $DelaiDemarrage
+    $pids = Pids-Betclic $procs
     $fenetres = @(Lister-Fenetres | Where-Object { $pids.ContainsKey($_.ProcId) })
     $presentes = @{}
     foreach ($f in $fenetres) {
@@ -485,21 +594,23 @@ function Passage-Veille {
       if ($script:etat.connues.ContainsKey($f.Hwnd)) {
         if ($CompterTitres -and $script:etat.connues[$f.Hwnd] -ne $f.Titre -and -not $demarrage -and (Est-Table $f)) {
           $script:etat.tablesVues += 1
-          Journal ("Table (nouveau titre) : " + $f.Titre)
+          Journal ("Table (nouveau titre) : " + (Libelle-Fenetre $f))
           Ajouter-Partie 1 "table"
         }
         $script:etat.connues[$f.Hwnd] = $f.Titre
         continue
       }
       $script:etat.connues[$f.Hwnd] = $f.Titre
-      if ($premierPassage -or $demarrage) {
-        Journal ("Fenêtre de démarrage, non comptée : " + $f.Titre + " (" + $f.Largeur + "x" + $f.Hauteur + ")")
+      if ($premierPassage) {
+        Journal ("Fenêtre déjà ouverte, non comptée : " + (Libelle-Fenetre $f))
+      } elseif ($demarrage) {
+        Journal ("Fenêtre de démarrage de Betclic, non comptée : " + (Libelle-Fenetre $f))
       } elseif (Est-Table $f) {
         $script:etat.tablesVues += 1
-        Journal ("Table détectée : " + $f.Titre + " (" + $f.Largeur + "x" + $f.Hauteur + ")")
+        Journal ("Table détectée : " + (Libelle-Fenetre $f))
         Ajouter-Partie 1 "table"
       } else {
-        Journal ("Nouvelle fenêtre ignorée (" + $f.Largeur + "x" + $f.Hauteur + ") : " + $f.Titre)
+        Journal ("Nouvelle fenêtre ignorée (trop petite ou hors filtre) : " + (Libelle-Fenetre $f))
       }
     }
     foreach ($cle in @($script:etat.connues.Keys)) { if (-not $presentes.ContainsKey($cle)) { $script:etat.connues.Remove($cle) } }
