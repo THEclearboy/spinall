@@ -29,8 +29,10 @@
     -MotifTable "Spin & Rush - *|Expresso*"
                              noms d'éléments d'interface qui signalent une table ouverte à l'intérieur
                              de la fenêtre Betclic (plusieurs motifs séparés par |, joker * accepté)
-    -ModeTables auto         auto : tables lues dans la fenêtre (UI Automation) dès que ça marche, sinon
-                             nouvelles fenêtres ; uia ou fenetres pour forcer l'un ou l'autre
+    -ModeTables uia          uia : tables lues à l'intérieur de la fenêtre Betclic (UI Automation) ;
+                             fenetres : chaque nouvelle fenêtre à part compte ; auto : les deux
+    -RegleUia nombre         nombre : une partie quand le nombre d'éléments « table » augmente et reste
+                             augmenté deux lectures de suite ; ids : chaque nouvel élément compte
     -DossierHistoriques "<chemin>"
                              si le client écrit ses historiques de mains sur le disque : chaque nouveau
                              « Game ID » qui apparaît compte une partie (le plus fiable quand ça existe)
@@ -56,7 +58,8 @@ param(
   [string]$Processus = "*betclic*",
   [string]$FiltreTable = "*",
   [string]$MotifTable = "Spin & Rush - *|Expresso*",
-  [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "auto",
+  [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "uia",
+  [ValidateSet("nombre", "ids")][string]$RegleUia = "nombre",
   [string]$DossierHistoriques = "",
   [int]$DelaiDemarrage = 30,
   [int]$PauseMax = 120,
@@ -91,7 +94,8 @@ function Arguments-Veille([string]$script = $PSCommandPath) {
   if ($Processus -ne "*betclic*") { $a += @("-Processus", ('"' + $Processus + '"')) }
   if ($FiltreTable -ne "*") { $a += @("-FiltreTable", ('"' + $FiltreTable + '"')) }
   if ($MotifTable -ne "Spin & Rush - *|Expresso*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
-  if ($ModeTables -ne "auto") { $a += @("-ModeTables", $ModeTables) }
+  if ($ModeTables -ne "uia") { $a += @("-ModeTables", $ModeTables) }
+  if ($RegleUia -ne "nombre") { $a += @("-RegleUia", $RegleUia) }
   if ($DossierHistoriques) { $a += @("-DossierHistoriques", ('"' + $DossierHistoriques + '"')) }
   if ($DelaiDemarrage -ne 30) { $a += @("-DelaiDemarrage", $DelaiDemarrage) }
   if ($PauseMax -ne 120) { $a += @("-PauseMax", $PauseMax) }
@@ -477,6 +481,8 @@ $script:etat = @{
   uiaBaseline = 0            # passages UIA de référence effectués (les tables déjà ouvertes ne comptent pas)
   uiaClesPrecedentes = ""
   uiaProuve = $false         # UIA a déjà trouvé des tables : on ne compte plus les fenêtres à part
+  uiaNombre = 0              # nombre d'éléments « table » de référence (règle nombre)
+  uiaCandidat = $null        # nombre vu à la lecture précédente, en attente de confirmation
   passage = 0
   tablesVues = 0
   quitter = $false
@@ -532,6 +538,15 @@ function Terminer-Session([int64]$fin = (Maintenant-Ms)) {
   $script:etat.parties = 0
   $script:etat.derniereActivite = $null
   Sauver-Session
+  Rafraichir
+}
+
+function Remettre-A-Zero {
+  $script:etat.debut = $null
+  $script:etat.parties = 0
+  $script:etat.derniereActivite = $null
+  Sauver-Session
+  Journal "Session remise à zéro."
   Rafraichir
 }
 
@@ -702,6 +717,7 @@ $window.Add_Closing({
 $menu = New-Object System.Windows.Controls.ContextMenu
 foreach ($entree in @(
   @{ texte = "Terminer la session (archive dans sessions.csv)"; action = { Terminer-Session } },
+  @{ texte = "Remettre à zéro (sans archiver)"; action = { Remettre-A-Zero } },
   @{ texte = "Ouvrir le dossier (journal, sessions)"; action = { Start-Process $Dossier } },
   @{ texte = "Ouvrir Expresso Trainer (site)"; action = { Start-Process $UrlSite } },
   @{ texte = "Quitter le HUD"; action = { Quitter } }
@@ -734,6 +750,8 @@ function Passage-Veille {
         $script:etat.tablesUia = @{}
         $script:etat.uiaBaseline = 0
         $script:etat.uiaClesPrecedentes = ""
+        $script:etat.uiaNombre = 0
+        $script:etat.uiaCandidat = $null
         Journal "Betclic fermé."
         if ($Veille) { $window.Hide() }
         Rafraichir
@@ -809,7 +827,40 @@ function Passage-Veille {
         }
         $script:etat.tablesUia = @{}
         foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
+        $script:etat.uiaNombre = $elements.Count
+        $script:etat.uiaCandidat = $null
         if ($elements.Count -gt 0) { $script:etat.uiaProuve = $true }
+      } elseif ($RegleUia -eq "nombre") {
+        # Une partie quand le nombre d'éléments « table » dépasse la référence à deux lectures de suite ;
+        # un rafraîchissement de l'interface (mêmes éléments recréés) ne change pas le nombre.
+        $n = $elements.Count
+        if ($n -lt $script:etat.uiaNombre) {
+          Journal ("Tables (UIA) : " + $script:etat.uiaNombre + " → " + $n + " (fermeture).")
+          $script:etat.uiaNombre = $n
+          $script:etat.uiaCandidat = $null
+        } elseif ($n -gt $script:etat.uiaNombre) {
+          if ($script:etat.uiaCandidat -eq $n) {
+            $delta = $n - $script:etat.uiaNombre
+            $script:etat.uiaNombre = $n
+            $script:etat.uiaCandidat = $null
+            $script:etat.uiaProuve = $true
+            $noms = ($elements | ForEach-Object { $_.Nom + " [" + $_.Type + ", " + $_.Classe + "]" }) -join ", "
+            if ($demarrage) {
+              Journal ("Tables (UIA) pendant le démarrage de Betclic, non comptées : " + $noms)
+            } else {
+              $script:etat.tablesVues += $delta
+              Journal ("Tables (UIA) : " + ($n - $delta) + " → " + $n + ", +" + $delta + " partie(s) : " + $noms)
+              Ajouter-Partie $delta "table"
+            }
+          } else {
+            $script:etat.uiaCandidat = $n
+            Journal ("Tables (UIA) : " + $script:etat.uiaNombre + " → " + $n + " vu une fois, confirmation à la prochaine lecture.")
+          }
+        } else {
+          $script:etat.uiaCandidat = $null
+        }
+        $script:etat.tablesUia = @{}
+        foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
       } else {
         $presentesUia = @{}
         foreach ($e in $elements) {
