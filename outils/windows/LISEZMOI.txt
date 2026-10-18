@@ -37,9 +37,19 @@ Autres commandes
   (après installation, la copie du script est dans %LOCALAPPDATA%\Expresso Trainer\hud-betclic.ps1 ;
    la même chose en PowerShell : & "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Desinstaller)
 
-Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -FiltreTable "*Expresso*")
+Comment les tables sont comptées
+  Le client Betclic Poker Playground dessine ses tables à l'intérieur de sa fenêtre. Le HUD lit donc
+  l'arbre d'accessibilité de cette fenêtre (UI Automation, lecture seule) et y cherche les éléments
+  nommés comme une table : « Spin & Rush - 1€ », « Expresso… ». Chaque nouvel élément = une partie.
+  Une table ouverte dans une fenêtre à part compte aussi.
+
+Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush - *")
   -Processus "*betclic*"    nom du processus du client (Gestionnaire des tâches → Détails)
-  -FiltreTable "*"          ne compter que les fenêtres dont le titre correspond
+  -MotifTable "Spin & Rush - *|Expresso*"   noms d'éléments qui signalent une table (séparés par |)
+  -ModeTables auto          auto, uia (dans la fenêtre seulement) ou fenetres (fenêtres à part seulement)
+  -DossierHistoriques "<chemin>"   si le client écrit ses historiques de mains sur le disque,
+                            chaque nouveau « Game ID » compte une partie (le plus fiable quand ça existe)
+  -FiltreTable "*"          fenêtres à part : ne compter que celles dont le titre correspond
   -CompterTitres            si Betclic réutilise la même fenêtre pour la partie suivante
   -DelaiDemarrage 30        secondes après le lancement de Betclic où rien n'est compté
   -PauseMax 120             minutes sans activité avant une nouvelle session

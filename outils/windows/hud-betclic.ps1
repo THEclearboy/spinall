@@ -26,7 +26,15 @@
   Options (à ajouter après la commande, ex. : installer-hud-betclic.cmd -FiltreTable "*Expresso*") :
     -Processus "*betclic*"   nom du processus du client Betclic (joker * accepté ;
                              Gestionnaire des tâches → Détails si le client porte un autre nom)
-    -FiltreTable "*"         ne compter que les fenêtres dont le titre correspond
+    -MotifTable "Spin & Rush - *|Expresso*"
+                             noms d'éléments d'interface qui signalent une table ouverte à l'intérieur
+                             de la fenêtre Betclic (plusieurs motifs séparés par |, joker * accepté)
+    -ModeTables auto         auto : tables lues dans la fenêtre (UI Automation) dès que ça marche, sinon
+                             nouvelles fenêtres ; uia ou fenetres pour forcer l'un ou l'autre
+    -DossierHistoriques "<chemin>"
+                             si le client écrit ses historiques de mains sur le disque : chaque nouveau
+                             « Game ID » qui apparaît compte une partie (le plus fiable quand ça existe)
+    -FiltreTable "*"         fenêtres à part : ne compter que celles dont le titre correspond
     -CompterTitres           compter aussi un changement de titre d'une table déjà ouverte
                              (si le client réutilise la même fenêtre d'une partie à l'autre)
     -DelaiDemarrage 30       secondes après le lancement de Betclic pendant lesquelles les
@@ -47,6 +55,9 @@ param(
   [switch]$CompterTitres,
   [string]$Processus = "*betclic*",
   [string]$FiltreTable = "*",
+  [string]$MotifTable = "Spin & Rush - *|Expresso*",
+  [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "auto",
+  [string]$DossierHistoriques = "",
   [int]$DelaiDemarrage = 30,
   [int]$PauseMax = 120,
   [int]$TailleMinTable = 300,
@@ -79,6 +90,9 @@ function Arguments-Veille([string]$script = $PSCommandPath) {
   $a = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", ('"' + $script + '"'), "-Veille")
   if ($Processus -ne "*betclic*") { $a += @("-Processus", ('"' + $Processus + '"')) }
   if ($FiltreTable -ne "*") { $a += @("-FiltreTable", ('"' + $FiltreTable + '"')) }
+  if ($MotifTable -ne "Spin & Rush - *|Expresso*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
+  if ($ModeTables -ne "auto") { $a += @("-ModeTables", $ModeTables) }
+  if ($DossierHistoriques) { $a += @("-DossierHistoriques", ('"' + $DossierHistoriques + '"')) }
   if ($DelaiDemarrage -ne 30) { $a += @("-DelaiDemarrage", $DelaiDemarrage) }
   if ($PauseMax -ne 120) { $a += @("-PauseMax", $PauseMax) }
   if ($TailleMinTable -ne 300) { $a += @("-TailleMinTable", $TailleMinTable) }
@@ -244,6 +258,116 @@ function Pids-Betclic($procs) {
   return $pids
 }
 
+# ======================================================= tables intégrées : UI Automation
+# Le client Betclic dessine ses tables à l'intérieur de sa fenêtre principale : on lit
+# l'arbre d'accessibilité de cette fenêtre et on y cherche les éléments nommés comme
+# une table (-MotifTable). Chaque nouvel élément = une table ouverte = une partie.
+$MotifsTable = @($MotifTable -split "\|" | Where-Object { $_ })
+$script:uiaDisponible = $null
+
+function Initialiser-Uia {
+  if ($script:uiaDisponible -ne $null) { return $script:uiaDisponible }
+  try {
+    Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+    $script:uiaDisponible = $true
+  } catch {
+    $script:uiaDisponible = $false
+    Journal ("UI Automation indisponible : " + $_.Exception.Message)
+  }
+  return $script:uiaDisponible
+}
+
+function Elements-Tables([string]$hwnd) {
+  # Éléments de la fenêtre hwnd dont le nom correspond à un motif de table : [{ Cle, Nom, Type, Classe }]
+  $resultat = New-Object System.Collections.Generic.List[object]
+  $racine = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][int64]$hwnd)
+  if (-not $racine) { return $resultat }
+  $tous = $racine.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+  $script:uiaElementsVus = $tous.Count
+  foreach ($e in $tous) {
+    $nom = $null
+    try { $nom = $e.Current.Name } catch { continue }
+    if (-not $nom) { continue }
+    foreach ($motif in $MotifsTable) {
+      if ($nom -like $motif) {
+        $type = ""
+        $classe = ""
+        try { $type = $e.Current.ControlType.ProgrammaticName.Replace("ControlType.", ""); $classe = $e.Current.ClassName } catch {}
+        $resultat.Add([pscustomobject]@{ Cle = (($e.GetRuntimeId()) -join "."); Nom = $nom; Type = $type; Classe = $classe })
+        break
+      }
+    }
+  }
+  return $resultat
+}
+
+function Dump-Uia([string]$hwnd, $l, [int]$max = 2500) {
+  # Arbre d'accessibilité (vue contrôle) : type | classe | automationId | nom, indenté par profondeur.
+  $racine = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][int64]$hwnd)
+  $marcheur = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+  $pile = New-Object System.Collections.Generic.Stack[object]
+  $pile.Push(@($racine, 0))
+  $compte = 0
+  while ($pile.Count -gt 0 -and $compte -lt $max) {
+    $paire = $pile.Pop()
+    $e = $paire[0]
+    $prof = $paire[1]
+    $compte += 1
+    try {
+      $c = $e.Current
+      $nom = if ($c.Name) { ($c.Name -replace "\s+", " ") } else { "" }
+      if ($nom.Length -gt 90) { $nom = $nom.Substring(0, 90) + "…" }
+      $l.Add("   " + ("  " * $prof) + $c.ControlType.ProgrammaticName.Replace("ControlType.", "") + " | " + $c.ClassName + " | " + $c.AutomationId + " | " + $nom)
+    } catch { continue }
+    if ($prof -ge 16) { continue }
+    $enfants = New-Object System.Collections.Generic.List[object]
+    try {
+      $x = $marcheur.GetFirstChild($e)
+      while ($x) { $enfants.Add($x); $x = $marcheur.GetNextSibling($x) }
+    } catch {}
+    for ($i = $enfants.Count - 1; $i -ge 0; $i--) { $pile.Push(@($enfants[$i], $prof + 1)) }
+  }
+  if ($compte -ge $max) { $l.Add("   … (arrêt à $max éléments)") }
+}
+
+# ======================================================= historiques de mains sur le disque
+$script:historiques = @{ fichiers = @{}; connus = @{}; initialise = $false }
+
+function Ids-Parties-Du-Texte([string]$texte) {
+  $ids = New-Object System.Collections.Generic.List[string]
+  foreach ($m in [regex]::Matches($texte, "(?m)^(?:Game ID|Tournament ID|Tournoi)\s*[:#]\s*(\S+)\s*$")) { $ids.Add($m.Groups[1].Value) }
+  foreach ($m in [regex]::Matches($texte, "(?m)Tournament #(\d+)")) { $ids.Add("t" + $m.Groups[1].Value) }
+  return $ids
+}
+
+function Scanner-Historiques {
+  # Premier passage : mémorise les parties déjà présentes (pas comptées) ; ensuite, renvoie les ids nouveaux.
+  $nouvelles = New-Object System.Collections.Generic.List[string]
+  if (-not $DossierHistoriques -or -not (Test-Path $DossierHistoriques)) { return $nouvelles }
+  $limite = (Get-Date).AddHours(-48)
+  $fichiers = @(Get-ChildItem -Path $DossierHistoriques -File -Recurse -Depth 3 -ErrorAction SilentlyContinue |
+    Where-Object { $_.LastWriteTime -gt $limite -and $_.Length -lt 50MB })
+  foreach ($f in $fichiers) {
+    $precedent = $script:historiques.fichiers[$f.FullName]
+    $etat = @{ mtime = $f.LastWriteTimeUtc.Ticks; taille = $f.Length }
+    $change = (-not $precedent) -or ($precedent.mtime -ne $etat.mtime) -or ($precedent.taille -ne $etat.taille)
+    $script:historiques.fichiers[$f.FullName] = $etat
+    if (-not $change) { continue }
+    $texte = ""
+    try { $texte = [System.IO.File]::ReadAllText($f.FullName) } catch { continue }
+    foreach ($id in (Ids-Parties-Du-Texte $texte)) {
+      if ($script:historiques.connus.ContainsKey($id)) { continue }
+      $script:historiques.connus[$id] = $true
+      if ($script:historiques.initialise) { $nouvelles.Add($id) }
+    }
+  }
+  if (-not $script:historiques.initialise) {
+    $script:historiques.initialise = $true
+    Journal ("Historiques : " + $fichiers.Count + " fichier(s) récent(s) dans " + $DossierHistoriques + ", " + $script:historiques.connus.Count + " partie(s) déjà présentes.")
+  }
+  return $nouvelles
+}
+
 function Diagnostic {
   $procs = Processus-Betclic
   $pids = Pids-Betclic $procs
@@ -255,8 +379,12 @@ function Diagnostic {
   $l.Add("")
   $l.Add("1. Processus reconnus comme Betclic : " + $procs.Count)
   foreach ($p in $procs) {
-    $debut = try { $p.StartTime.ToString("HH:mm:ss") } catch { "?" }
+    $debut = "?"
+    try { $debut = $p.StartTime.ToString("HH:mm:ss") } catch {}
+    $exe = ""
+    try { $exe = $p.Path } catch {}
     $l.Add("   " + $p.ProcessName + "  (pid " + $p.Id + ", démarré à " + $debut + ", fenêtre principale : " + $p.MainWindowTitle + ")")
+    if ($exe) { $l.Add("      exécutable : " + $exe) }
   }
   $l.Add("   + processus fils suivis : " + (($pids.Keys | Where-Object { $noms.ContainsKey($_) } | ForEach-Object { $noms[$_] + " (" + $_ + ")" }) -join ", "))
   $l.Add("")
@@ -272,6 +400,19 @@ function Diagnostic {
     }
   }
   $l.Add("")
+  $l.Add("2b. Éléments d'interface à l'intérieur de ces fenêtres (UI Automation) ; motifs de table : " + ($MotifsTable -join " | "))
+  if (Initialiser-Uia) {
+    foreach ($f in $fenetresBetclic) {
+      if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
+      $chrono = [System.Diagnostics.Stopwatch]::StartNew()
+      $tables = @(Elements-Tables $f.Hwnd)
+      $l.Add("   Fenêtre " + (Libelle-Fenetre $f) + " : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $tables.Count + " correspondant à un motif de table :")
+      foreach ($t in $tables) { $l.Add("      TABLE : " + $t.Nom + " [" + $t.Type + ", " + $t.Classe + ", id " + $t.Cle + "]") }
+      $l.Add("   Arbre (type | classe | id | nom) :")
+      Dump-Uia $f.Hwnd $l
+    }
+  } else { $l.Add("   (UI Automation indisponible)") }
+  $l.Add("")
   $l.Add("3. Processus dont le nom ou la fenêtre évoque le poker (si le 1. est vide, c'est là qu'on trouve le bon -Processus) :")
   foreach ($p in Get-Process) {
     $titre = ""
@@ -285,6 +426,28 @@ function Diagnostic {
   foreach ($f in Lister-Fenetres) {
     $nom = if ($noms.ContainsKey($f.ProcId)) { $noms[$f.ProcId] } else { "pid " + $f.ProcId }
     $l.Add("   " + $nom + " | " + $f.Classe + " | " + $f.Largeur + "x" + $f.Hauteur + " | " + $f.Titre)
+  }
+  $l.Add("")
+  $l.Add("5. Dossiers Betclic / poker et leurs fichiers récents (historiques de mains sur le disque ?) :")
+  $racines = @($env:APPDATA, $env:LOCALAPPDATA, $env:PROGRAMDATA, (Join-Path $env:USERPROFILE "Documents")) | Where-Object { $_ -and (Test-Path $_) }
+  foreach ($r in $racines) {
+    $dossiers = @(Get-ChildItem -Path $r -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -like "*betclic*" -or $_.Name -like "*poker*" -or $_.Name -like "*playground*" })
+    foreach ($d in $dossiers) {
+      $l.Add("   " + $d.FullName)
+      $recents = @(Get-ChildItem -Path $d.FullName -File -Recurse -Depth 4 -ErrorAction SilentlyContinue |
+        Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-3) } | Sort-Object LastWriteTime -Descending | Select-Object -First 30)
+      foreach ($fi in $recents) {
+        $indice = ""
+        if ($fi.Length -lt 20MB -and (@(".txt", ".log", ".json", ".xml", ".hh", ".csv", "") -contains $fi.Extension.ToLower())) {
+          try {
+            $tete = (Get-Content -Path $fi.FullName -TotalCount 80 -ErrorAction Stop) -join "`n"
+            if ($tete -match "Hand ID|\*\*\* HEADER|Game ID|Tournament|Spin & Rush|Expresso") { $indice = "   <-- ressemble à un historique de mains" }
+          } catch {}
+        }
+        $l.Add("      " + $fi.LastWriteTime.ToString("dd/MM HH:mm") + "  " + [Math]::Round($fi.Length / 1KB) + " Ko  " + $fi.FullName.Substring($d.FullName.Length) + $indice)
+      }
+    }
   }
   $fichier = Join-Path $Dossier "diagnostic.txt"
   $l | Set-Content -Path $fichier -Encoding UTF8
@@ -310,6 +473,11 @@ $script:etat = @{
   betclicVu = $false
   momentDetection = Get-Date
   connues = @{}              # hwnd → titre des fenêtres de Betclic déjà vues
+  tablesUia = @{}            # clé d'élément → nom des tables lues dans la fenêtre (UI Automation)
+  uiaBaseline = 0            # passages UIA de référence effectués (les tables déjà ouvertes ne comptent pas)
+  uiaClesPrecedentes = ""
+  uiaProuve = $false         # UIA a déjà trouvé des tables : on ne compte plus les fenêtres à part
+  passage = 0
   tablesVues = 0
   quitter = $false
 }
@@ -563,6 +731,9 @@ function Passage-Veille {
       if ($script:etat.betclicVu) {
         $script:etat.betclicVu = $false
         $script:etat.connues = @{}
+        $script:etat.tablesUia = @{}
+        $script:etat.uiaBaseline = 0
+        $script:etat.uiaClesPrecedentes = ""
         Journal "Betclic fermé."
         if ($Veille) { $window.Hide() }
         Rafraichir
@@ -606,14 +777,65 @@ function Passage-Veille {
       } elseif ($demarrage) {
         Journal ("Fenêtre de démarrage de Betclic, non comptée : " + (Libelle-Fenetre $f))
       } elseif (Est-Table $f) {
-        $script:etat.tablesVues += 1
-        Journal ("Table détectée : " + (Libelle-Fenetre $f))
-        Ajouter-Partie 1 "table"
+        if ($ModeTables -eq "uia" -or ($ModeTables -eq "auto" -and $script:etat.uiaProuve)) {
+          Journal ("Nouvelle fenêtre (les tables sont lues à l'intérieur, non comptée ici) : " + (Libelle-Fenetre $f))
+        } else {
+          $script:etat.tablesVues += 1
+          Journal ("Table détectée (fenêtre) : " + (Libelle-Fenetre $f))
+          Ajouter-Partie 1 "table"
+        }
       } else {
         Journal ("Nouvelle fenêtre ignorée (trop petite ou hors filtre) : " + (Libelle-Fenetre $f))
       }
     }
     foreach ($cle in @($script:etat.connues.Keys)) { if (-not $presentes.ContainsKey($cle)) { $script:etat.connues.Remove($cle) } }
+
+    # ---- tables à l'intérieur de la fenêtre (UI Automation), un passage sur deux (≈ 6 s)
+    $script:etat.passage += 1
+    if ($ModeTables -ne "fenetres" -and ($script:etat.passage % 2 -eq 0) -and (Initialiser-Uia)) {
+      $chrono = [System.Diagnostics.Stopwatch]::StartNew()
+      $elements = New-Object System.Collections.Generic.List[object]
+      foreach ($f in $fenetres) {
+        if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
+        try { foreach ($e in (Elements-Tables $f.Hwnd)) { $elements.Add($e) } } catch { Journal ("UIA : " + $_.Exception.Message) }
+      }
+      $cles = ($elements | ForEach-Object { $_.Cle } | Sort-Object) -join ","
+      # Référence : deux lectures identiques de suite (l'arbre d'accessibilité se construit à la première lecture).
+      if ($script:etat.uiaBaseline -lt 2) {
+        if ($cles -eq $script:etat.uiaClesPrecedentes) { $script:etat.uiaBaseline += 1 } else { $script:etat.uiaBaseline = 0 }
+        $script:etat.uiaClesPrecedentes = $cles
+        if ($script:etat.uiaBaseline -eq 0 -or $script:etat.uiaBaseline -eq 2) {
+          Journal ("UIA : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $elements.Count + " table(s) déjà ouverte(s), non comptée(s)" + ($(if ($elements.Count) { " : " + (($elements | ForEach-Object { $_.Nom + " [" + $_.Type + "]" }) -join ", ") } else { "" })))
+        }
+        $script:etat.tablesUia = @{}
+        foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
+        if ($elements.Count -gt 0) { $script:etat.uiaProuve = $true }
+      } else {
+        $presentesUia = @{}
+        foreach ($e in $elements) {
+          $presentesUia[$e.Cle] = $true
+          if ($script:etat.tablesUia.ContainsKey($e.Cle)) { continue }
+          $script:etat.tablesUia[$e.Cle] = $e.Nom
+          $script:etat.uiaProuve = $true
+          if ($demarrage) {
+            Journal ("Table (UIA) pendant le démarrage de Betclic, non comptée : " + $e.Nom)
+          } else {
+            $script:etat.tablesVues += 1
+            Journal ("Table détectée (UIA) : " + $e.Nom + " [" + $e.Type + ", " + $e.Classe + "]")
+            Ajouter-Partie 1 "table"
+          }
+        }
+        foreach ($cle in @($script:etat.tablesUia.Keys)) { if (-not $presentesUia.ContainsKey($cle)) { Journal ("Table fermée (UIA) : " + $script:etat.tablesUia[$cle]); $script:etat.tablesUia.Remove($cle) } }
+      }
+    }
+
+    # ---- historiques de mains sur le disque
+    if ($DossierHistoriques) {
+      foreach ($id in (Scanner-Historiques)) {
+        Journal ("Partie détectée (historique) : " + $id)
+        Ajouter-Partie 1 "historique"
+      }
+    }
   } catch {
     Journal ("Erreur de veille : " + $_.Exception.Message)
   }
@@ -635,7 +857,7 @@ $timerVeille.Add_Tick({ Passage-Veille })
 $timerVeille.Start()
 
 if ($Veille) {
-  Journal "Veille démarrée : processus '$Processus', tables '$FiltreTable', dossier $Dossier"
+  Journal ("Veille démarrée : processus '$Processus', motifs de table '" + ($MotifsTable -join " | ") + "', mode $ModeTables" + ($(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" })) + ", dossier $Dossier")
   Passage-Veille
 } else {
   Journal "HUD ouvert."
