@@ -35,8 +35,12 @@
                              de la fenêtre Betclic (plusieurs motifs séparés par |, joker * accepté)
     -ModeTables uia          uia : tables lues à l'intérieur de la fenêtre Betclic (UI Automation) ;
                              fenetres : chaque nouvelle fenêtre à part compte ; auto : les deux
-    -RegleUia nombre         nombre : une partie quand le nombre d'éléments « table » augmente et reste
-                             augmenté deux lectures de suite ; ids : chaque nouvel élément compte
+    -MotifDepart "10 - 20|10-20|10 / 20"
+                             texte affiché seulement au début d'une partie (niveau de blinds 1) : quand
+                             il apparaît, une partie commence. Signal par défaut, insensible au lobby.
+    -RegleUia depart         depart : une partie quand un texte de -MotifDepart apparaît (confirmé à la
+                             lecture suivante) ; nombre : quand le nombre d'éléments -MotifTable augmente ;
+                             ids : chaque nouvel élément -MotifTable compte
     -DossierHistoriques "<chemin>"
                              si le client écrit ses historiques de mains sur le disque : chaque nouveau
                              « Game ID » qui apparaît compte une partie (le plus fiable quand ça existe)
@@ -49,8 +53,8 @@
     -Dossier "<chemin>"      où sont écrits session, sessions.csv et journal.log
                              (par défaut : %LOCALAPPDATA%\Expresso Trainer)
 
-  Dans la fenêtre : + ou Entrée = +1, − = −1, clic droit = menu (terminer la session,
-  ouvrir le dossier, quitter), glisser pour déplacer, Échap pour ranger.
+  Dans la fenêtre : + ou Entrée = +1, − = −1, ↺ deux fois = remise à zéro, clic droit = menu
+  (terminer la session, ouvrir le dossier, quitter), glisser pour déplacer, Échap pour ranger.
   Tout ce que le HUD voit est noté dans <Dossier>\journal.log.
 #>
 param(
@@ -65,7 +69,8 @@ param(
   [string]$FiltreTable = "*",
   [string]$MotifTable = "Spin & Rush - *|Expresso*",
   [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "uia",
-  [ValidateSet("nombre", "ids")][string]$RegleUia = "nombre",
+  [string]$MotifDepart = "10 - 20|10-20|10 / 20",
+  [ValidateSet("depart", "nombre", "ids")][string]$RegleUia = "depart",
   [string]$DossierHistoriques = "",
   [int]$DelaiDemarrage = 30,
   [int]$PauseMax = 120,
@@ -102,7 +107,8 @@ function Arguments-Veille([string]$script = $PSCommandPath) {
   if ($FiltreTable -ne "*") { $a += @("-FiltreTable", ('"' + $FiltreTable + '"')) }
   if ($MotifTable -ne "Spin & Rush - *|Expresso*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
   if ($ModeTables -ne "uia") { $a += @("-ModeTables", $ModeTables) }
-  if ($RegleUia -ne "nombre") { $a += @("-RegleUia", $RegleUia) }
+  if ($MotifDepart -ne "10 - 20|10-20|10 / 20") { $a += @("-MotifDepart", ('"' + $MotifDepart + '"')) }
+  if ($RegleUia -ne "depart") { $a += @("-RegleUia", $RegleUia) }
   if ($DossierHistoriques) { $a += @("-DossierHistoriques", ('"' + $DossierHistoriques + '"')) }
   if ($DelaiDemarrage -ne 30) { $a += @("-DelaiDemarrage", $DelaiDemarrage) }
   if ($PauseMax -ne 120) { $a += @("-PauseMax", $PauseMax) }
@@ -279,6 +285,7 @@ function Pids-Betclic($procs) {
 # l'arbre d'accessibilité de cette fenêtre et on y cherche les éléments nommés comme
 # une table (-MotifTable). Chaque nouvel élément = une table ouverte = une partie.
 $MotifsTable = @($MotifTable -split "\|" | Where-Object { $_ })
+$MotifsDepart = @($MotifDepart -split "\|" | Where-Object { $_ })
 $script:uiaDisponible = $null
 
 function Initialiser-Uia {
@@ -294,7 +301,8 @@ function Initialiser-Uia {
 }
 
 function Elements-Tables([string]$hwnd) {
-  # Éléments de la fenêtre hwnd dont le nom correspond à un motif de table : [{ Cle, Nom, Type, Classe }]
+  # Éléments de la fenêtre hwnd dont le nom correspond à un motif de table (Genre « table »)
+  # ou de début de partie (Genre « depart ») : [{ Cle, Nom, Type, Classe, Genre }]
   $resultat = New-Object System.Collections.Generic.List[object]
   $racine = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][int64]$hwnd)
   if (-not $racine) { return $resultat }
@@ -304,15 +312,15 @@ function Elements-Tables([string]$hwnd) {
     $nom = $null
     try { $nom = $e.Current.Name } catch { continue }
     if (-not $nom) { continue }
-    foreach ($motif in $MotifsTable) {
-      if ($nom -like $motif) {
-        $type = ""
-        $classe = ""
-        try { $type = $e.Current.ControlType.ProgrammaticName.Replace("ControlType.", ""); $classe = $e.Current.ClassName } catch {}
-        $resultat.Add([pscustomobject]@{ Cle = (($e.GetRuntimeId()) -join "."); Nom = $nom; Type = $type; Classe = $classe })
-        break
-      }
-    }
+    $nom = ($nom -replace "\s+", " ").Trim()
+    $genre = $null
+    foreach ($motif in $MotifsDepart) { if ($nom -like $motif) { $genre = "depart"; break } }
+    if (-not $genre) { foreach ($motif in $MotifsTable) { if ($nom -like $motif) { $genre = "table"; break } } }
+    if (-not $genre) { continue }
+    $type = ""
+    $classe = ""
+    try { $type = $e.Current.ControlType.ProgrammaticName.Replace("ControlType.", ""); $classe = $e.Current.ClassName } catch {}
+    $resultat.Add([pscustomobject]@{ Cle = (($e.GetRuntimeId()) -join "."); Nom = $nom; Type = $type; Classe = $classe; Genre = $genre })
   }
   return $resultat
 }
@@ -416,14 +424,14 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500) {
     }
   }
   $l.Add("")
-  $l.Add("2b. Éléments d'interface à l'intérieur de ces fenêtres (UI Automation) ; motifs de table : " + ($MotifsTable -join " | "))
+  $l.Add("2b. Éléments d'interface à l'intérieur de ces fenêtres (UI Automation) ; motifs de table : " + ($MotifsTable -join " | ") + " ; motifs de début de partie : " + ($MotifsDepart -join " | "))
   if (Initialiser-Uia) {
     foreach ($f in $fenetresBetclic) {
       if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
       $chrono = [System.Diagnostics.Stopwatch]::StartNew()
       $tables = @(Elements-Tables $f.Hwnd)
       $l.Add("   Fenêtre " + (Libelle-Fenetre $f) + " : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $tables.Count + " correspondant à un motif de table :")
-      foreach ($t in $tables) { $l.Add("      TABLE : " + $t.Nom + " [" + $t.Type + ", " + $t.Classe + ", id " + $t.Cle + "]") }
+      foreach ($t in $tables) { $l.Add("      " + $t.Genre.ToUpper() + " : " + $t.Nom + " [" + $t.Type + ", " + $t.Classe + ", id " + $t.Cle + "]") }
       $l.Add("   Arbre (type | classe | id | nom) :")
       Dump-Uia $f.Hwnd $l $TailleArbre
     }
@@ -656,6 +664,9 @@ $xaml = @"
         <Button x:Name="Fermer" DockPanel.Dock="Right" Content="×" Width="22" Height="22" Background="Transparent"
                 Foreground="#FF9A9A9A" BorderThickness="0" FontSize="17" Padding="0" Cursor="Hand" Focusable="False"
                 ToolTip="Ranger le HUD (Échap)"/>
+        <Button x:Name="Reset" DockPanel.Dock="Right" Content="↺" Width="30" Height="22" Background="Transparent"
+                Foreground="#FF9A9A9A" BorderThickness="0" FontSize="15" Padding="0" Margin="0,0,2,0" Cursor="Hand" Focusable="False"
+                ToolTip="Remettre à zéro le chrono et les parties (deux clics)"/>
         <TextBlock x:Name="Cadence" DockPanel.Dock="Right" Text="— / h" Foreground="#FF9A9A9A" FontSize="11"
                    FontWeight="Bold" Margin="0,3,10,0"/>
         <StackPanel Orientation="Horizontal">
@@ -681,7 +692,7 @@ $xaml = @"
 
 $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader ([xml]$xaml)))
 $ctl = @{}
-foreach ($nom in @("Fermer", "Cadence", "Point", "Chrono", "Moins", "Plus", "Nombre", "Libelle")) { $ctl[$nom] = $window.FindName($nom) }
+foreach ($nom in @("Fermer", "Reset", "Cadence", "Point", "Chrono", "Moins", "Plus", "Nombre", "Libelle")) { $ctl[$nom] = $window.FindName($nom) }
 $CouleurLime = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FFD9FF5A")
 $CouleurGris = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FF9A9A9A")
 $CouleurOrange = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FFE8834A")
@@ -733,6 +744,29 @@ function Quitter {
   [System.Windows.Threading.Dispatcher]::CurrentDispatcher.InvokeShutdown()
 }
 
+# Remise à zéro en deux clics : le premier arme le bouton (↺ ?) pendant 4 s, le second confirme.
+$script:resetArme = $false
+$timerReset = New-Object System.Windows.Threading.DispatcherTimer
+$timerReset.Interval = [TimeSpan]::FromSeconds(4)
+$timerReset.Add_Tick({ Desarmer-Reset })
+function Desarmer-Reset {
+  $timerReset.Stop()
+  $script:resetArme = $false
+  $ctl.Reset.Content = "↺"
+  $ctl.Reset.Foreground = $CouleurGris
+}
+function Reset-Clic {
+  if ($script:resetArme) {
+    Desarmer-Reset
+    Remettre-A-Zero
+  } else {
+    $script:resetArme = $true
+    $ctl.Reset.Content = "↺ ?"
+    $ctl.Reset.Foreground = $CouleurOrange
+    $timerReset.Start()
+  }
+}
+$ctl.Reset.Add_Click({ Reset-Clic })
 $ctl.Plus.Add_Click({ Ajouter-Partie 1 "bouton +1" })
 $ctl.Moins.Add_Click({ Ajouter-Partie -1 "bouton −1" })
 $ctl.Fermer.Add_Click({ Ranger-Hud })
@@ -865,25 +899,28 @@ function Passage-Veille {
         if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
         try { foreach ($e in (Elements-Tables $f.Hwnd)) { $elements.Add($e) } } catch { Journal ("UIA : " + $_.Exception.Message) }
       }
+      if ($RegleUia -eq "depart") { $elements = @($elements | Where-Object { $_.Genre -eq "depart" }) }
+      else { $elements = @($elements | Where-Object { $_.Genre -eq "table" }) }
       $cles = ($elements | ForEach-Object { $_.Cle } | Sort-Object) -join ","
       # Référence : deux lectures identiques de suite (l'arbre d'accessibilité se construit à la première lecture).
       if ($script:etat.uiaBaseline -lt 2) {
         if ($cles -eq $script:etat.uiaClesPrecedentes) { $script:etat.uiaBaseline += 1 } else { $script:etat.uiaBaseline = 0 }
         $script:etat.uiaClesPrecedentes = $cles
         if ($script:etat.uiaBaseline -eq 0 -or $script:etat.uiaBaseline -eq 2) {
-          Journal ("UIA : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $elements.Count + " table(s) déjà ouverte(s), non comptée(s)" + ($(if ($elements.Count) { " : " + (($elements | ForEach-Object { $_.Nom + " [" + $_.Type + "]" }) -join ", ") } else { "" })))
+          Journal ("UIA (règle $RegleUia) : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $elements.Count + " élément(s) déjà présent(s), non compté(s)" + ($(if ($elements.Count) { " : " + (($elements | ForEach-Object { $_.Nom + " [" + $_.Type + "]" }) -join ", ") } else { "" })))
         }
         $script:etat.tablesUia = @{}
         foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
         $script:etat.uiaNombre = $elements.Count
         $script:etat.uiaCandidat = $null
         if ($elements.Count -gt 0) { $script:etat.uiaProuve = $true }
-      } elseif ($RegleUia -eq "nombre") {
-        # Une partie quand le nombre d'éléments « table » dépasse la référence à deux lectures de suite ;
-        # un rafraîchissement de l'interface (mêmes éléments recréés) ne change pas le nombre.
+      } elseif ($RegleUia -eq "nombre" -or $RegleUia -eq "depart") {
+        # Une partie quand le nombre d'éléments (« table », ou « début de partie » = niveau de blinds 1)
+        # dépasse la référence à deux lectures de suite ; un rafraîchissement de l'interface qui recrée
+        # les mêmes éléments ne change pas le nombre.
         $n = $elements.Count
         if ($n -lt $script:etat.uiaNombre) {
-          Journal ("Tables (UIA) : " + $script:etat.uiaNombre + " → " + $n + " (fermeture).")
+          Journal ("UIA : " + $script:etat.uiaNombre + " → " + $n + " élément(s) (" + $(if ($RegleUia -eq "depart") { "fin du niveau 1 ou table fermée" } else { "table fermée" }) + ").")
           $script:etat.uiaNombre = $n
           $script:etat.uiaCandidat = $null
         } elseif ($n -gt $script:etat.uiaNombre) {
@@ -897,12 +934,12 @@ function Passage-Veille {
               Journal ("Tables (UIA) pendant le démarrage de Betclic, non comptées : " + $noms)
             } else {
               $script:etat.tablesVues += $delta
-              Journal ("Tables (UIA) : " + ($n - $delta) + " → " + $n + ", +" + $delta + " partie(s) : " + $noms)
+              Journal ("UIA : " + ($n - $delta) + " → " + $n + " élément(s), +" + $delta + " partie(s) : " + $noms)
               Ajouter-Partie $delta "table"
             }
           } else {
             $script:etat.uiaCandidat = $n
-            Journal ("Tables (UIA) : " + $script:etat.uiaNombre + " → " + $n + " vu une fois, confirmation à la prochaine lecture.")
+            Journal ("UIA : " + $script:etat.uiaNombre + " → " + $n + " élément(s) vu une fois, confirmation à la prochaine lecture.")
           }
         } else {
           $script:etat.uiaCandidat = $null
@@ -956,7 +993,7 @@ $timerVeille.Add_Tick({ Passage-Veille })
 $timerVeille.Start()
 
 if ($Veille) {
-  Journal ("Veille démarrée : processus '$Processus', motifs de table '" + ($MotifsTable -join " | ") + "', mode $ModeTables" + ($(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" })) + ", dossier $Dossier")
+  Journal ("Veille démarrée : processus '$Processus', règle $RegleUia, début de partie '" + ($MotifsDepart -join " | ") + "', table '" + ($MotifsTable -join " | ") + "', mode $ModeTables" + ($(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" })) + ", dossier $Dossier")
   Passage-Veille
 } else {
   Journal "HUD ouvert."

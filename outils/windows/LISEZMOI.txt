@@ -27,6 +27,7 @@ Si Windows bloque le double-clic
 Au quotidien
   - Les tables ouvertes dans Betclic comptent automatiquement (+1 à la première, et le chrono démarre).
   - +1 / −1 corrigent à la main ; touches + (ou Entrée) et − quand la fenêtre est active.
+  - ↺ (deux clics) remet le chrono et les parties à zéro, par exemple après une partie comptée à tort.
   - Glisse la fenêtre où tu veux, sa position est mémorisée. Échap ou × la range ; clic droit → menu.
   - Clic droit → « Terminer la session » archive la session dans sessions.csv (ouvrable avec Excel) ;
     « Remettre à zéro » efface la session en cours sans l'archiver (partie comptée à tort, par exemple).
@@ -38,18 +39,20 @@ Autres commandes
   (après installation, la copie du script est dans %LOCALAPPDATA%\Expresso Trainer\hud-betclic.ps1 ;
    la même chose en PowerShell : & "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Desinstaller)
 
-Comment les tables sont comptées
+Comment les parties sont comptées
   Le client Betclic Poker Playground dessine ses tables à l'intérieur de sa fenêtre. Le HUD lit donc
-  l'arbre d'accessibilité de cette fenêtre (UI Automation, lecture seule) et y cherche les éléments
-  nommés comme une table : « Spin & Rush - 1€ », « Expresso… ». Chaque nouvel élément = une partie.
-  Une table ouverte dans une fenêtre à part compte aussi.
+  l'arbre d'accessibilité de cette fenêtre (UI Automation, lecture seule). Au début d'une partie, la
+  table affiche le niveau de blinds 1, « 10 - 20 » : quand ce texte apparaît (et reste à la lecture
+  suivante, 6 s plus tard), une partie commence. Ce texte n'existe ni dans le lobby ni plus tard dans
+  la partie, d'où l'absence de faux positifs. Si tes parties démarrent à un autre niveau, règle -MotifDepart.
 
 Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush - *")
   -Processus "*betclic*"    nom du processus du client (Gestionnaire des tâches → Détails)
   -MotifTable "Spin & Rush - *|Expresso*"   noms d'éléments qui signalent une table (séparés par |)
   -ModeTables uia           uia (tables lues dans la fenêtre), fenetres (fenêtres à part) ou auto (les deux)
-  -RegleUia nombre          nombre : +1 quand le nombre d'éléments « table » augmente, confirmé à la lecture
-                            suivante ; ids : chaque nouvel élément compte (plus réactif, plus de faux positifs)
+  -MotifDepart "10 - 20|10-20|10 / 20"   texte visible seulement au début d'une partie (niveau 1)
+  -RegleUia depart          depart (par défaut) ; nombre : +1 quand le nombre d'éléments -MotifTable augmente ;
+                            ids : chaque nouvel élément -MotifTable compte (plus de faux positifs)
   -DossierHistoriques "<chemin>"   si le client écrit ses historiques de mains sur le disque,
                             chaque nouveau « Game ID » compte une partie (le plus fiable quand ça existe)
   -FiltreTable "*"          fenêtres à part : ne compter que celles dont le titre correspond
