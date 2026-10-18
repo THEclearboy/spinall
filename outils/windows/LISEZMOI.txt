@@ -40,16 +40,20 @@ Autres commandes
    la même chose en PowerShell : & "$env:LOCALAPPDATA\Expresso Trainer\hud-betclic.ps1" -Desinstaller)
 
 Comment les parties sont comptées
-  Le client Betclic Poker Playground dessine ses tables à l'intérieur de sa fenêtre. Le HUD lit donc
-  l'arbre d'accessibilité de cette fenêtre (UI Automation, lecture seule). Au début d'une partie, la
-  table affiche le niveau de blinds 1, « 10 - 20 » : quand ce texte apparaît (et reste à la lecture
-  suivante, 6 s plus tard), une partie commence. Ce texte n'existe ni dans le lobby ni plus tard dans
-  la partie, d'où l'absence de faux positifs. Si tes parties démarrent à un autre niveau, règle -MotifDepart.
+  Recommandé : dans Betclic, Paramètres → « Afficher les tables dans des fenêtres indépendantes » (bêta).
+  Chaque table devient alors une vraie fenêtre Windows, et chaque nouvelle fenêtre de table = une partie.
+  Les fenêtres qui ne sont jamais des tables sont ignorées (lobby « Betclic Poker », « Betclic Poker
+  Playground », sélecteur de fichiers, captcha, menus) : réglable avec -ExclureFenetres.
+  En complément, le HUD lit l'intérieur des autres fenêtres (UI Automation et MSAA, lecture seule) :
+  quand le niveau de blinds 1 « 10 - 20 » apparaît et reste à la lecture suivante, une partie commence.
+  Le client Betclic est une application Flutter qui n'expose pas toujours ses textes : si rien n'est
+  compté sans l'option ci-dessus, active-la.
 
 Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush - *")
   -Processus "*betclic*"    nom du processus du client (Gestionnaire des tâches → Détails)
   -MotifTable "Spin & Rush - *|Expresso*"   noms d'éléments qui signalent une table (séparés par |)
-  -ModeTables uia           uia (tables lues dans la fenêtre), fenetres (fenêtres à part) ou auto (les deux)
+  -ModeTables auto          auto (fenêtres de table + lecture intérieure), fenetres ou uia (un seul canal)
+  -ExclureFenetres "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*"   fenêtres jamais tables
   -MotifDepart "10 - 20|10-20|10 / 20"   texte visible seulement au début d'une partie (niveau 1)
   -RegleUia depart          depart (par défaut) ; nombre : +1 quand le nombre d'éléments -MotifTable augmente ;
                             ids : chaque nouvel élément -MotifTable compte (plus de faux positifs)

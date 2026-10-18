@@ -33,8 +33,11 @@
     -MotifTable "Spin & Rush - *|Expresso*"
                              noms d'éléments d'interface qui signalent une table ouverte à l'intérieur
                              de la fenêtre Betclic (plusieurs motifs séparés par |, joker * accepté)
-    -ModeTables uia          uia : tables lues à l'intérieur de la fenêtre Betclic (UI Automation) ;
-                             fenetres : chaque nouvelle fenêtre à part compte ; auto : les deux
+    -ModeTables auto         auto : chaque nouvelle fenêtre de table compte (option Betclic « Afficher les
+                             tables dans des fenêtres indépendantes », recommandée) ET lecture à l'intérieur
+                             des fenêtres restantes ; fenetres ou uia pour n'utiliser qu'un seul canal
+    -ExclureFenetres "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*"
+                             titres de fenêtres de Betclic qui ne sont jamais des tables
     -MotifDepart "10 - 20|10-20|10 / 20"
                              texte affiché seulement au début d'une partie (niveau de blinds 1) : quand
                              il apparaît, une partie commence. Signal par défaut, insensible au lobby.
@@ -68,7 +71,8 @@ param(
   [string]$Processus = "*betclic*",
   [string]$FiltreTable = "*",
   [string]$MotifTable = "Spin & Rush - *|Expresso*",
-  [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "uia",
+  [ValidateSet("auto", "uia", "fenetres")][string]$ModeTables = "auto",
+  [string]$ExclureFenetres = "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*",
   [string]$MotifDepart = "10 - 20|10-20|10 / 20",
   [ValidateSet("depart", "nombre", "ids")][string]$RegleUia = "depart",
   [string]$DossierHistoriques = "",
@@ -106,7 +110,8 @@ function Arguments-Veille([string]$script = $PSCommandPath) {
   if ($Processus -ne "*betclic*") { $a += @("-Processus", ('"' + $Processus + '"')) }
   if ($FiltreTable -ne "*") { $a += @("-FiltreTable", ('"' + $FiltreTable + '"')) }
   if ($MotifTable -ne "Spin & Rush - *|Expresso*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
-  if ($ModeTables -ne "uia") { $a += @("-ModeTables", $ModeTables) }
+  if ($ModeTables -ne "auto") { $a += @("-ModeTables", $ModeTables) }
+  if ($ExclureFenetres -ne "Betclic Poker|Betclic Poker Playground|File Picker|*captcha*") { $a += @("-ExclureFenetres", ('"' + $ExclureFenetres + '"')) }
   if ($MotifDepart -ne "10 - 20|10-20|10 / 20") { $a += @("-MotifDepart", ('"' + $MotifDepart + '"')) }
   if ($RegleUia -ne "depart") { $a += @("-RegleUia", $RegleUia) }
   if ($DossierHistoriques) { $a += @("-DossierHistoriques", ('"' + $DossierHistoriques + '"')) }
@@ -246,6 +251,9 @@ function Lister-Fenetres {
 
 function Est-Table($fenetre) {
   if ($fenetre.Largeur -lt $TailleMinTable -or $fenetre.Hauteur -lt $TailleMinTable) { return $false }
+  if (-not $fenetre.Titre) { return $false }
+  foreach ($x in $Exclusions) { if ($fenetre.Titre -like $x) { return $false } }
+  if ($fenetre.Classe -eq "#32768" -or $fenetre.Classe -like "*Tooltip*") { return $false }
   if ($FiltreTable -eq "*") { return $true }
   return ($fenetre.Titre -like $FiltreTable)
 }
@@ -282,6 +290,8 @@ function Pids-Betclic($procs) {
 # l'arbre d'accessibilité de cette fenêtre et on y cherche les éléments nommés comme
 # une table (-MotifTable). Chaque nouvel élément = une table ouverte = une partie.
 $MotifsTable = @($MotifTable -split "\|" | Where-Object { $_ })
+$Exclusions = @($ExclureFenetres -split "\|" | Where-Object { $_ })
+$ProcessusSansTable = @("msedgewebview2", "chrome", "msedge")
 $MotifsDepart = @($MotifDepart -split "\|" | Where-Object { $_ })
 $script:uiaDisponible = $null
 
@@ -297,29 +307,158 @@ function Initialiser-Uia {
   return $script:uiaDisponible
 }
 
+# ---- MSAA (IAccessible) : le canal d'accessibilité que le client Flutter de Betclic expose vraiment.
+$script:msaaDisponible = $null
+function Initialiser-Msaa {
+  if ($script:msaaDisponible -ne $null) { return $script:msaaDisponible }
+  try {
+    $acc = [System.Reflection.Assembly]::Load("Accessibility, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a")
+    Add-Type -ReferencedAssemblies @($acc.Location) -TypeDefinition @"
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+using Accessibility;
+public static class MsaaWin {
+  [DllImport("oleacc.dll")] static extern int AccessibleObjectFromWindow(IntPtr hwnd, uint dwId, ref Guid riid, [MarshalAs(UnmanagedType.IUnknown)] out object ppvObject);
+  [DllImport("oleacc.dll")] static extern uint AccessibleChildren(IAccessible paccContainer, int iChildStart, int cChildren, [Out] object[] rgvarChildren, out int pcObtained);
+  [DllImport("oleacc.dll", CharSet = CharSet.Unicode)] static extern uint GetRoleText(uint role, StringBuilder lpszRole, uint cchRoleMax);
+  static Guid IID_IAccessible = new Guid("618736E0-3C3D-11CF-810C-00AA00389B71");
+  const uint OBJID_CLIENT = 0xFFFFFFFC;
+  public static IAccessible Racine(long hwnd) {
+    object o;
+    int hr = AccessibleObjectFromWindow(new IntPtr(hwnd), OBJID_CLIENT, ref IID_IAccessible, out o);
+    if (hr != 0) return null;
+    return o as IAccessible;
+  }
+  static string Propre(string s) { return (s ?? "").Replace("\t", " ").Replace("\r", " ").Replace("\n", " ").Trim(); }
+  // "profondeur TAB chemin TAB rôle TAB nom TAB valeur" pour chaque nœud (parcours borné)
+  public static List<string> Lister(long hwnd, int max, int budgetMs) {
+    var liste = new List<string>();
+    var racine = Racine(hwnd);
+    if (racine == null) return liste;
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    Marcher(racine, 0, "0", liste, max, budgetMs, sw);
+    return liste;
+  }
+  static void Marcher(IAccessible acc, int prof, string chemin, List<string> liste, int max, int budgetMs, System.Diagnostics.Stopwatch sw) {
+    if (liste.Count >= max || sw.ElapsedMilliseconds > budgetMs || prof > 40) return;
+    string nom = "", valeur = "", role = "";
+    try { nom = Propre(acc.get_accName(0) as string); } catch {}
+    try { valeur = Propre(acc.get_accValue(0) as string); } catch {}
+    try {
+      object r = acc.get_accRole(0);
+      if (r is int) { var sb = new StringBuilder(64); GetRoleText((uint)(int)r, sb, 64); role = sb.ToString(); }
+      else role = Convert.ToString(r);
+    } catch {}
+    liste.Add(prof + "\t" + chemin + "\t" + role + "\t" + nom + "\t" + valeur);
+    int n = 0;
+    try { n = acc.accChildCount; } catch { return; }
+    if (n <= 0 || n > 5000) return;
+    var enfants = new object[n];
+    int obtenus;
+    if (AccessibleChildren(acc, 0, n, enfants, out obtenus) != 0) return;
+    for (int i = 0; i < obtenus; i++) {
+      var e = enfants[i] as IAccessible;
+      if (e != null) { Marcher(e, prof + 1, chemin + "." + i, liste, max, budgetMs, sw); }
+      else {
+        try {
+          string nomSimple = Propre(acc.get_accName(enfants[i]) as string);
+          if (nomSimple.Length > 0) liste.Add((prof + 1) + "\t" + chemin + "." + i + "\t(simple)\t" + nomSimple + "\t");
+        } catch {}
+      }
+      if (liste.Count >= max || sw.ElapsedMilliseconds > budgetMs) return;
+    }
+  }
+}
+"@
+    $script:msaaDisponible = $true
+  } catch {
+    $script:msaaDisponible = $false
+    Journal ("MSAA indisponible : " + $_.Exception.Message)
+  }
+  return $script:msaaDisponible
+}
+
+function Msaa-Lister([string]$hwnd, [int]$max = 3000, [int]$budgetMs = 2000) {
+  # [{ Profondeur, Chemin, Role, Nom, Valeur }] pour la fenêtre hwnd (objet client MSAA)
+  $liste = New-Object System.Collections.Generic.List[object]
+  if (-not (Initialiser-Msaa)) { return $liste }
+  foreach ($ligne in [MsaaWin]::Lister([int64]$hwnd, $max, $budgetMs)) {
+    $p = $ligne -split "`t", 5
+    $liste.Add([pscustomobject]@{ Profondeur = [int]$p[0]; Chemin = $p[1]; Role = $p[2]; Nom = $p[3]; Valeur = $p[4] })
+  }
+  return $liste
+}
+
+function Genre-Du-Nom([string]$nom) {
+  foreach ($motif in $MotifsDepart) { if ($nom -like $motif) { return "depart" } }
+  foreach ($motif in $MotifsTable) { if ($nom -like $motif) { return "table" } }
+  return $null
+}
+
 function Elements-Tables([string]$hwnd) {
-  # Éléments de la fenêtre hwnd dont le nom correspond à un motif de table (Genre « table »)
-  # ou de début de partie (Genre « depart ») : [{ Cle, Nom, Type, Classe, Genre }]
+  # Éléments d'interface de la fenêtre hwnd (et de ses fenêtres enfants) dont le nom correspond à un
+  # motif de table (Genre « table ») ou de début de partie (Genre « depart »), lus par UI Automation
+  # et par MSAA : [{ Cle, Nom, Type, Classe, Genre, Source }]. Source = canal:hwnd, pour que le même
+  # texte vu par deux canaux ne compte pas deux fois (voir Compter-Elements).
   $resultat = New-Object System.Collections.Generic.List[object]
-  $racine = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][int64]$hwnd)
-  if (-not $racine) { return $resultat }
-  $tous = $racine.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
-  $script:uiaElementsVus = $tous.Count
-  foreach ($e in $tous) {
-    $nom = $null
-    try { $nom = $e.Current.Name } catch { continue }
-    if (-not $nom) { continue }
-    $nom = ($nom -replace "\s+", " ").Trim()
-    $genre = $null
-    foreach ($motif in $MotifsDepart) { if ($nom -like $motif) { $genre = "depart"; break } }
-    if (-not $genre) { foreach ($motif in $MotifsTable) { if ($nom -like $motif) { $genre = "table"; break } } }
-    if (-not $genre) { continue }
-    $type = ""
-    $classe = ""
-    try { $type = $e.Current.ControlType.ProgrammaticName.Replace("ControlType.", ""); $classe = $e.Current.ClassName } catch {}
-    $resultat.Add([pscustomobject]@{ Cle = (($e.GetRuntimeId()) -join "."); Nom = $nom; Type = $type; Classe = $classe; Genre = $genre })
+  $script:uiaElementsVus = 0
+  $script:msaaElementsVus = 0
+  if (Initialiser-Uia) {
+    try {
+      $racine = [System.Windows.Automation.AutomationElement]::FromHandle([IntPtr][int64]$hwnd)
+      if ($racine) {
+        $tous = $racine.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+        $script:uiaElementsVus = $tous.Count
+        foreach ($e in $tous) {
+          $nom = $null
+          try { $nom = $e.Current.Name } catch { continue }
+          if (-not $nom) { continue }
+          $nom = ($nom -replace "\s+", " ").Trim()
+          $genre = Genre-Du-Nom $nom
+          if (-not $genre) { continue }
+          $type = ""
+          $classe = ""
+          try { $type = $e.Current.ControlType.ProgrammaticName.Replace("ControlType.", ""); $classe = $e.Current.ClassName } catch {}
+          $resultat.Add([pscustomobject]@{ Cle = ("uia." + (($e.GetRuntimeId()) -join ".")); Nom = $nom; Type = $type; Classe = $classe; Genre = $genre; Source = "uia:" + $hwnd })
+        }
+      }
+    } catch { Journal ("UIA : " + $_.Exception.Message) }
+  }
+  # MSAA : la fenêtre elle-même puis ses fenêtres enfants (la vue Flutter est une fenêtre enfant)
+  $cibles = New-Object System.Collections.Generic.List[string]
+  $cibles.Add($hwnd)
+  foreach ($e in [FenetresWin]::ListerEnfants([int64]$hwnd)) { $cibles.Add(($e -split "`t", 5)[0]) }
+  foreach ($cible in $cibles) {
+    $noeuds = Msaa-Lister $cible 3000 1500
+    $script:msaaElementsVus += $noeuds.Count
+    foreach ($nd in $noeuds) {
+      foreach ($texte in @($nd.Nom, $nd.Valeur)) {
+        if (-not $texte) { continue }
+        $nom = ($texte -replace "\s+", " ").Trim()
+        $genre = Genre-Du-Nom $nom
+        if (-not $genre) { continue }
+        $resultat.Add([pscustomobject]@{ Cle = ("msaa." + $cible + "." + $nd.Chemin); Nom = $nom; Type = $nd.Role; Classe = "msaa"; Genre = $genre; Source = "msaa:" + $cible })
+        break
+      }
+    }
   }
   return $resultat
+}
+
+# Nombre d'éléments d'un genre : le maximum par canal, pas la somme (un même texte peut être vu par
+# UI Automation et par MSAA, ou dans la fenêtre hôte et dans sa vue enfant).
+function Compter-Elements($elements, [string]$genre) {
+  $parSource = @{}
+  foreach ($e in $elements) {
+    if ($e.Genre -ne $genre) { continue }
+    if (-not $parSource.ContainsKey($e.Source)) { $parSource[$e.Source] = 0 }
+    $parSource[$e.Source] += 1
+  }
+  $max = 0
+  foreach ($v in $parSource.Values) { if ($v -gt $max) { $max = $v } }
+  return $max
 }
 
 function Dump-Uia([string]$hwnd, $l, [int]$max = 2500, [int]$BudgetMs = 20000) {
@@ -419,7 +558,8 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapi
     $l.Add("   " + $table + "  " + (Libelle-Fenetre $f) + "  hwnd " + $f.Hwnd)
     foreach ($e in [FenetresWin]::ListerEnfants([int64]$f.Hwnd)) {
       $q = $e -split "`t", 5
-      $l.Add("        enfant : " + (if ($q[4]) { $q[4] } else { "(sans titre)" }) + " [" + $q[3] + ", " + $q[1] + "x" + $q[2] + "]")
+      $nomEnfant = if ($q[4]) { $q[4] } else { "(sans titre)" }
+      $l.Add("        enfant : " + $nomEnfant + " [" + $q[3] + ", " + $q[1] + "x" + $q[2] + "]")
     }
   }
   $l.Add("")
@@ -429,12 +569,30 @@ function Diagnostic([switch]$Silencieux, [int]$TailleArbre = 2500, [switch]$Rapi
       if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
       $chrono = [System.Diagnostics.Stopwatch]::StartNew()
       $tables = @(Elements-Tables $f.Hwnd)
-      $l.Add("   Fenêtre " + (Libelle-Fenetre $f) + " : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $tables.Count + " correspondant à un motif de table :")
+      $l.Add("   Fenêtre " + (Libelle-Fenetre $f) + " : UIA " + $script:uiaElementsVus + " éléments, MSAA " + $script:msaaElementsVus + " nœuds, lus en " + $chrono.ElapsedMilliseconds + " ms ; " + $tables.Count + " correspondant à un motif :")
       foreach ($t in $tables) { $l.Add("      " + $t.Genre.ToUpper() + " : " + $t.Nom + " [" + $t.Type + ", " + $t.Classe + ", id " + $t.Cle + "]") }
-      $l.Add("   Arbre (type | classe | id | nom) :")
+      $l.Add("   Arbre UIA (type | classe | id | nom) :")
       Dump-Uia $f.Hwnd $l $TailleArbre $(if ($Rapide) { 5000 } else { 20000 })
+      $l.Add("   Arbre MSAA (ce que l'application Flutter expose) — fenêtre et fenêtres enfants (profondeur | rôle | nom | valeur) :")
+      $cibles = New-Object System.Collections.Generic.List[string]
+      $cibles.Add($f.Hwnd)
+      foreach ($e in [FenetresWin]::ListerEnfants([int64]$f.Hwnd)) { $cibles.Add(($e -split "`t", 5)[0]) }
+      foreach ($cible in $cibles) {
+        $noeuds = Msaa-Lister $cible $TailleArbre $(if ($Rapide) { 4000 } else { 15000 })
+        $l.Add("     hwnd " + $cible + " : " + $noeuds.Count + " nœud(s)")
+        $affiches = 0
+        foreach ($nd in $noeuds) {
+          if ($affiches -ge $TailleArbre) { $l.Add("     … (arrêt à $TailleArbre nœuds)"); break }
+          if (-not $nd.Nom -and -not $nd.Valeur) { continue }
+          $nomCourt = $nd.Nom
+          if ($nomCourt.Length -gt 90) { $nomCourt = $nomCourt.Substring(0, 90) + "…" }
+          $l.Add("     " + ("  " * [Math]::Min($nd.Profondeur, 20)) + $nd.Role + " | " + $nomCourt + $(if ($nd.Valeur) { " | " + $nd.Valeur } else { "" }))
+          $affiches += 1
+        }
+      }
     }
   } else { $l.Add("   (UI Automation indisponible)") }
+  $l.Add("   MSAA disponible : " + (Initialiser-Msaa))
   $l.Add("")
   $l.Add("3. Processus dont le nom ou la fenêtre évoque le poker (si le 1. est vide, c'est là qu'on trouve le bon -Processus) :")
   foreach ($p in Get-Process) {
@@ -541,6 +699,7 @@ $script:etat = @{
   uiaClesPrecedentes = ""
   uiaProuve = $false         # UIA a déjà trouvé des tables : on ne compte plus les fenêtres à part
   uiaNombre = 0              # nombre d'éléments « table » de référence (règle nombre)
+  fenetresTables = @{}       # hwnd des fenêtres comptées comme tables (non relues à l'intérieur)
   uiaCandidat = $null        # nombre vu à la lecture précédente, en attente de confirmation
   passage = 0
   tablesVues = 0
@@ -848,6 +1007,7 @@ function Passage-Veille {
         $script:etat.uiaClesPrecedentes = ""
         $script:etat.uiaNombre = 0
         $script:etat.uiaCandidat = $null
+        $script:etat.fenetresTables = @{}
         Journal "Betclic fermé."
         if ($Veille) { $window.Hide() }
         Rafraichir
@@ -872,7 +1032,11 @@ function Passage-Veille {
     if (-not $debutBetclic) { $debutBetclic = $script:etat.momentDetection }
     $demarrage = ((Get-Date) - $debutBetclic).TotalSeconds -lt $DelaiDemarrage
     $pids = Pids-Betclic $procs
+    $nomsProc = @{}
+    foreach ($p in $procs) { $nomsProc[[int]$p.Id] = $p.ProcessName.ToLower() }
     $fenetres = @(Lister-Fenetres | Where-Object { $pids.ContainsKey($_.ProcId) })
+    # Les navigateurs intégrés (captcha, pages web) n'ouvrent jamais de table.
+    $fenetres = @($fenetres | Where-Object { -not ($nomsProc.ContainsKey($_.ProcId) -and ($ProcessusSansTable -contains $nomsProc[$_.ProcId])) })
     $presentes = @{}
     foreach ($f in $fenetres) {
       $presentes[$f.Hwnd] = $true
@@ -891,10 +1055,11 @@ function Passage-Veille {
       } elseif ($demarrage) {
         Journal ("Fenêtre de démarrage de Betclic, non comptée : " + (Libelle-Fenetre $f))
       } elseif (Est-Table $f) {
-        if ($ModeTables -eq "uia" -or ($ModeTables -eq "auto" -and $script:etat.uiaProuve)) {
-          Journal ("Nouvelle fenêtre (les tables sont lues à l'intérieur, non comptée ici) : " + (Libelle-Fenetre $f))
+        if ($ModeTables -eq "uia") {
+          Journal ("Nouvelle fenêtre (mode uia : non comptée) : " + (Libelle-Fenetre $f))
         } else {
           $script:etat.tablesVues += 1
+          $script:etat.fenetresTables[$f.Hwnd] = $true
           Journal ("Table détectée (fenêtre) : " + (Libelle-Fenetre $f))
           Ajouter-Partie 1 "table"
         }
@@ -902,37 +1067,43 @@ function Passage-Veille {
         Journal ("Nouvelle fenêtre ignorée (trop petite ou hors filtre) : " + (Libelle-Fenetre $f))
       }
     }
-    foreach ($cle in @($script:etat.connues.Keys)) { if (-not $presentes.ContainsKey($cle)) { $script:etat.connues.Remove($cle) } }
+    foreach ($cle in @($script:etat.connues.Keys)) { if (-not $presentes.ContainsKey($cle)) { $script:etat.connues.Remove($cle); $script:etat.fenetresTables.Remove($cle) } }
 
-    # ---- tables à l'intérieur de la fenêtre (UI Automation), un passage sur deux (≈ 6 s)
+    # ---- tables à l'intérieur des fenêtres (UI Automation + MSAA), un passage sur deux (≈ 6 s).
+    # Les fenêtres déjà comptées comme tables ne sont pas relues (pas de double compte).
     $script:etat.passage += 1
-    if ($ModeTables -ne "fenetres" -and ($script:etat.passage % 2 -eq 0) -and (Initialiser-Uia)) {
+    if ($ModeTables -ne "fenetres" -and ($script:etat.passage % 2 -eq 0)) {
       $chrono = [System.Diagnostics.Stopwatch]::StartNew()
       $elements = New-Object System.Collections.Generic.List[object]
+      $lus = 0
       foreach ($f in $fenetres) {
         if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { continue }
-        try { foreach ($e in (Elements-Tables $f.Hwnd)) { $elements.Add($e) } } catch { Journal ("UIA : " + $_.Exception.Message) }
+        if ($script:etat.fenetresTables.ContainsKey($f.Hwnd)) { continue }
+        try { foreach ($e in (Elements-Tables $f.Hwnd)) { $elements.Add($e) } } catch { Journal ("Lecture intérieure : " + $_.Exception.Message) }
+        $lus += $script:uiaElementsVus + $script:msaaElementsVus
       }
-      if ($RegleUia -eq "depart") { $elements = @($elements | Where-Object { $_.Genre -eq "depart" }) }
-      else { $elements = @($elements | Where-Object { $_.Genre -eq "table" }) }
+      $script:uiaElementsVus = $lus
+      $genreVoulu = $(if ($RegleUia -eq "depart") { "depart" } else { "table" })
+      $elements = @($elements | Where-Object { $_.Genre -eq $genreVoulu })
+      $nombre = Compter-Elements $elements $genreVoulu
       $cles = ($elements | ForEach-Object { $_.Cle } | Sort-Object) -join ","
       # Référence : deux lectures identiques de suite (l'arbre d'accessibilité se construit à la première lecture).
       if ($script:etat.uiaBaseline -lt 2) {
         if ($cles -eq $script:etat.uiaClesPrecedentes) { $script:etat.uiaBaseline += 1 } else { $script:etat.uiaBaseline = 0 }
         $script:etat.uiaClesPrecedentes = $cles
         if ($script:etat.uiaBaseline -eq 0 -or $script:etat.uiaBaseline -eq 2) {
-          Journal ("UIA (règle $RegleUia) : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $elements.Count + " élément(s) déjà présent(s), non compté(s)" + ($(if ($elements.Count) { " : " + (($elements | ForEach-Object { $_.Nom + " [" + $_.Type + "]" }) -join ", ") } else { "" })))
+          Journal ("Lecture intérieure (règle $RegleUia) : " + $script:uiaElementsVus + " éléments lus en " + $chrono.ElapsedMilliseconds + " ms, " + $nombre + " élément(s) déjà présent(s), non compté(s)" + ($(if ($elements.Count) { " : " + (($elements | ForEach-Object { $_.Nom + " [" + $_.Type + ", " + $_.Source + "]" }) -join ", ") } else { "" })))
         }
         $script:etat.tablesUia = @{}
         foreach ($e in $elements) { $script:etat.tablesUia[$e.Cle] = $e.Nom }
-        $script:etat.uiaNombre = $elements.Count
+        $script:etat.uiaNombre = $nombre
         $script:etat.uiaCandidat = $null
         if ($elements.Count -gt 0) { $script:etat.uiaProuve = $true }
       } elseif ($RegleUia -eq "nombre" -or $RegleUia -eq "depart") {
         # Une partie quand le nombre d'éléments (« table », ou « début de partie » = niveau de blinds 1)
         # dépasse la référence à deux lectures de suite ; un rafraîchissement de l'interface qui recrée
         # les mêmes éléments ne change pas le nombre.
-        $n = $elements.Count
+        $n = $nombre
         if ($n -lt $script:etat.uiaNombre) {
           Journal ("UIA : " + $script:etat.uiaNombre + " → " + $n + " élément(s) (" + $(if ($RegleUia -eq "depart") { "fin du niveau 1 ou table fermée" } else { "table fermée" }) + ").")
           $script:etat.uiaNombre = $n
@@ -943,7 +1114,7 @@ function Passage-Veille {
             $script:etat.uiaNombre = $n
             $script:etat.uiaCandidat = $null
             $script:etat.uiaProuve = $true
-            $noms = ($elements | ForEach-Object { $_.Nom + " [" + $_.Type + ", " + $_.Classe + "]" }) -join ", "
+            $noms = ($elements | ForEach-Object { $_.Nom + " [" + $_.Type + ", " + $_.Source + "]" }) -join ", "
             if ($demarrage) {
               Journal ("Tables (UIA) pendant le démarrage de Betclic, non comptées : " + $noms)
             } else {
