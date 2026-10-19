@@ -36,6 +36,9 @@
     -MotifDepart "10 - 20|10-20|10 / 20"
                              texte du niveau de blinds 1, lu à l'intérieur des fenêtres de table (en
                              arrière-plan) : s'il réapparaît dans une fenêtre réutilisée = nouvelle partie
+    -MotifRejouer "Rejouer*|Relancer*|Nouvelle partie*|Jouer encore*|Play again*"
+                             texte du bouton de fin de partie : quand il disparaît d'une fenêtre qui reste
+                             ouverte, une nouvelle partie a été relancée dans cette fenêtre
     -SansLectureInterieure   ne compter que par les titres de fenêtres
     -DelaiMemePartie 90      secondes après une partie comptée pendant lesquelles le niveau 1 de la
                              même fenêtre ne recompte pas
@@ -62,6 +65,7 @@ param(
   [string]$Processus = "*betclic*",
   [string]$MotifTable = "Spin & Rush*|Expresso*|Spin & Go*",
   [string]$MotifDepart = "10 - 20|10-20|10 / 20",
+  [string]$MotifRejouer = "Rejouer*|Relancer*|Nouvelle partie*|Jouer encore*|Play again*",
   [string]$DossierHistoriques = "",
   [int]$DelaiMemePartie = 90,
   [int]$PauseMax = 120,
@@ -69,7 +73,7 @@ param(
   [string]$Dossier = (Join-Path $env:LOCALAPPDATA "Expresso Trainer")
 )
 
-$Version = "2026-10-18.9"
+$Version = "2026-10-19.1"
 $ErrorActionPreference = "Stop"
 trap {
   # Erreur fatale (console cachée) : on la note et on l'affiche avant de s'arrêter.
@@ -98,6 +102,7 @@ function Arguments-Veille([string]$script = $PSCommandPath) {
   if ($Processus -ne "*betclic*") { $a += @("-Processus", ('"' + $Processus + '"')) }
   if ($MotifTable -ne "Spin & Rush*|Expresso*|Spin & Go*") { $a += @("-MotifTable", ('"' + $MotifTable + '"')) }
   if ($MotifDepart -ne "10 - 20|10-20|10 / 20") { $a += @("-MotifDepart", ('"' + $MotifDepart + '"')) }
+  if ($MotifRejouer -ne "Rejouer*|Relancer*|Nouvelle partie*|Jouer encore*|Play again*") { $a += @("-MotifRejouer", ('"' + $MotifRejouer + '"')) }
   if ($DossierHistoriques) { $a += @("-DossierHistoriques", ('"' + $DossierHistoriques + '"')) }
   if ($DelaiMemePartie -ne 90) { $a += @("-DelaiMemePartie", $DelaiMemePartie) }
   if ($PauseMax -ne 120) { $a += @("-PauseMax", $PauseMax) }
@@ -186,6 +191,13 @@ public static class FenetresWin {
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
   [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumProc f, IntPtr l);
+  [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr h, uint cmd);
+  [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr h, int attr, out int val, int size);
+  static int Masquee(IntPtr h) {
+    int v = 0;
+    try { DwmGetWindowAttribute(h, 14, out v, 4); } catch { v = 0; }
+    return v;
+  }
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
   static string Titre(IntPtr h) {
     int n = GetWindowTextLength(h);
@@ -199,14 +211,15 @@ public static class FenetresWin {
     GetClassName(h, sb, sb.Capacity);
     return sb.ToString();
   }
-  // "hwnd TAB pid TAB largeur TAB hauteur TAB classe TAB titre" pour chaque fenêtre visible (titrée ou non)
+  // "hwnd TAB pid TAB largeur TAB hauteur TAB classe TAB propriétaire TAB masquée TAB titre" pour chaque fenêtre visible
   public static List<string> Lister() {
     var liste = new List<string>();
     EnumWindows(delegate(IntPtr h, IntPtr l) {
       if (!IsWindowVisible(h)) return true;
       uint pid; GetWindowThreadProcessId(h, out pid);
       RECT r; GetWindowRect(h, out r);
-      liste.Add(h.ToInt64() + "\t" + pid + "\t" + (r.R - r.L) + "\t" + (r.B - r.T) + "\t" + Classe(h) + "\t" + Titre(h));
+      IntPtr proprietaire = GetWindow(h, 4);
+      liste.Add(h.ToInt64() + "\t" + pid + "\t" + (r.R - r.L) + "\t" + (r.B - r.T) + "\t" + Classe(h) + "\t" + proprietaire.ToInt64() + "\t" + Masquee(h) + "\t" + Titre(h));
       return true;
     }, IntPtr.Zero);
     return liste;
@@ -228,8 +241,8 @@ public static class FenetresWin {
 
 function Lister-Fenetres {
   [FenetresWin]::Lister() | ForEach-Object {
-    $p = $_ -split "`t", 6
-    [pscustomobject]@{ Hwnd = $p[0]; ProcId = [int]$p[1]; Largeur = [int]$p[2]; Hauteur = [int]$p[3]; Classe = $p[4]; Titre = $p[5] }
+    $p = $_ -split "`t", 8
+    [pscustomobject]@{ Hwnd = $p[0]; ProcId = [int]$p[1]; Largeur = [int]$p[2]; Hauteur = [int]$p[3]; Classe = $p[4]; Proprietaire = $p[5]; Masquee = ([int]$p[6] -ne 0); Titre = $p[7] }
   }
 }
 
@@ -243,12 +256,38 @@ function Est-TitrePartie([string]$titre) {
 function Est-FenetreDePartie($f) {
   if ($f.Largeur -lt $TailleMinTable -or $f.Hauteur -lt $TailleMinTable) { return $false }
   if ($f.Classe -eq "#32768" -or $f.Classe -like "*Tooltip*") { return $false }
+  if ($f.Masquee) { return $false }
   return (Est-TitrePartie $f.Titre)
+}
+
+# Betclic ouvre parfois deux fenêtres pour une table (même titre, même seconde, taille à quelques
+# pixels près, ou l'une appartenant à l'autre) : on ne garde qu'une fenêtre « principale » par table.
+function Regrouper-Jumelles($candidates, $tablesConnues) {
+  # candidates : fenêtres de partie apparues à ce passage ; renvoie @{ principales = [...]; jumelles = @{ hwnd → principale } }
+  $principales = New-Object System.Collections.Generic.List[object]
+  $jumelles = @{}
+  $hwnds = @{}
+  foreach ($c in $candidates) { $hwnds[$c.Hwnd] = $true }
+  foreach ($c in ($candidates | Sort-Object { if ($_.Proprietaire -and $_.Proprietaire -ne "0") { 1 } else { 0 } }, Hwnd)) {
+    if ($c.Proprietaire -and $c.Proprietaire -ne "0" -and ($hwnds.ContainsKey($c.Proprietaire) -or $tablesConnues.ContainsKey($c.Proprietaire))) {
+      $jumelles[$c.Hwnd] = $c.Proprietaire
+      continue
+    }
+    $doublon = $null
+    foreach ($p in $principales) {
+      if ($p.Titre -eq $c.Titre -and [Math]::Abs($p.Largeur - $c.Largeur) -le 12 -and [Math]::Abs($p.Hauteur - $c.Hauteur) -le 12) { $doublon = $p; break }
+    }
+    if ($doublon) { $jumelles[$c.Hwnd] = $doublon.Hwnd } else { $principales.Add($c) }
+  }
+  return @{ principales = $principales; jumelles = $jumelles }
 }
 
 function Libelle-Fenetre($f) {
   $titre = if ($f.Titre) { $f.Titre } else { "(sans titre)" }
-  return ($titre + " [" + $f.Classe + ", " + $f.Largeur + "x" + $f.Hauteur + "]")
+  $extra = ""
+  if ($f.Proprietaire -and $f.Proprietaire -ne "0") { $extra += ", propriétaire " + $f.Proprietaire }
+  if ($f.Masquee) { $extra += ", masquée" }
+  return ($titre + " [" + $f.Classe + ", " + $f.Largeur + "x" + $f.Hauteur + ", hwnd " + $f.Hwnd + $extra + "]")
 }
 
 # Processus reconnus + leurs processus fils (un client peut ouvrir ses tables dans un autre processus),
@@ -280,6 +319,7 @@ function Pids-Betclic($procs) {
 $MotifsTable = @($MotifTable -split "\|" | Where-Object { $_ })
 $ProcessusSansTable = @("msedgewebview2", "chrome", "msedge")
 $MotifsDepart = @($MotifDepart -split "\|" | Where-Object { $_ })
+$MotifsRejouer = @($MotifRejouer -split "\|" | Where-Object { $_ })
 $script:uiaDisponible = $null
 
 function Initialiser-Uia {
@@ -682,6 +722,8 @@ $script:etat = @{
   momentDetection = Get-Date
   connues = @{}              # hwnd → titre des fenêtres de Betclic déjà vues
   comptees = @{}             # hwnd → moment où la fenêtre a été comptée comme partie
+  tables = @{}               # hwnd → $true : fenêtres de table principales (lues à l'intérieur)
+  jumelles = @{}             # hwnd → hwnd de la fenêtre principale (fenêtre doublon, ignorée)
   niveau1 = @{}              # hwnd → état de la lecture intérieure (niveau 1 affiché ?)
   passage = 0
   tablesVues = 0
@@ -787,52 +829,79 @@ $script:runspaceLecture = $null
 $script:lectureEnCours = $null
 $script:derniereLecture = [datetime]::MinValue
 
-function Texte-Niveau1-Present($lignes) {
+function Textes-Des-Lignes($lignes) {
+  # Noms et valeurs non vides des nœuds MSAA, normalisés, sans doublon, dans l'ordre d'apparition.
+  $vus = @{}
+  $textes = New-Object System.Collections.Generic.List[string]
   foreach ($ligne in $lignes) {
     $p = $ligne -split "`t", 5
     foreach ($t in @($p[3], $p[4])) {
       if (-not $t) { continue }
       $n = ($t -replace "\s+", " ").Trim()
-      foreach ($m in $MotifsDepart) { if ($n -like $m) { return $true } }
+      if (-not $n -or $vus.ContainsKey($n)) { continue }
+      $vus[$n] = $true
+      $textes.Add($n)
     }
   }
+  return $textes
+}
+
+function Texte-Present($textes, $motifs) {
+  foreach ($n in $textes) { foreach ($m in $motifs) { if ($n -like $m) { return $true } } }
   return $false
 }
 
 function Traiter-Lecture($resultat) {
-  # resultat : hwnd → lignes MSAA. Par fenêtre : deux lectures de référence (l'arbre d'accessibilité
-  # se construit à la première), puis une apparition du niveau 1 confirmée par la lecture suivante
-  # = nouvelle partie, sauf si la fenêtre vient d'être comptée par son titre (même partie).
+  # resultat : hwnd → lignes MSAA. Par fenêtre de table, deux lectures de référence (l'arbre
+  # d'accessibilité se construit à la première), puis deux signaux de nouvelle partie dans une
+  # fenêtre réutilisée :
+  #   - le niveau de blinds 1 (-MotifDepart) apparaît, confirmé par la lecture suivante ;
+  #   - le bouton de fin de partie (-MotifRejouer) était affiché et disparaît, la fenêtre restant ouverte.
+  # Une fenêtre comptée par son titre il y a moins de -DelaiMemePartie secondes n'est pas recomptée.
   foreach ($h in @($resultat.Keys)) {
     $lignes = @($resultat[$h])
-    $present = Texte-Niveau1-Present $lignes
+    $textes = Textes-Des-Lignes $lignes
+    $niveau1 = Texte-Present $textes $MotifsDepart
+    $rejouer = Texte-Present $textes $MotifsRejouer
     $titre = if ($script:etat.connues.ContainsKey($h)) { $script:etat.connues[$h] } else { "hwnd " + $h }
     if (-not $script:etat.niveau1.ContainsKey($h)) {
-      $script:etat.niveau1[$h] = @{ present = $present; candidat = $false; lectures = 1 }
-      Journal ("Lecture intérieure de « " + $titre + " » : " + $lignes.Count + " nœud(s), niveau 1 " + $(if ($present) { "affiché" } else { "absent" }) + " (référence).")
+      $script:etat.niveau1[$h] = @{ present = $niveau1; candidat = $false; rejouer = $rejouer; lectures = 1; nbTextes = $textes.Count }
+      $apercu = ($textes | Select-Object -First 80) -join " | "
+      Journal ("Lecture intérieure de « " + $titre + " » (hwnd $h) : " + $lignes.Count + " nœud(s), " + $textes.Count + " texte(s), niveau 1 " + $(if ($niveau1) { "affiché" } else { "absent" }) + ", bouton rejouer " + $(if ($rejouer) { "affiché" } else { "absent" }) + " (référence). Textes : " + $apercu)
       continue
     }
     $e = $script:etat.niveau1[$h]
     $e.lectures += 1
-    if ($e.lectures -le 2) { $e.present = $present; $e.candidat = $false; continue }
-    if ($present -and -not $e.present) {
+    # les textes changent beaucoup : on note les nouveaux une fois par lecture, pour comprendre l'interface
+    if ($textes.Count -ne $e.nbTextes -and $e.lectures -le 6) {
+      Journal ("Textes de « " + $titre + " » : " + $textes.Count + " (" + (($textes | Select-Object -First 80) -join " | ") + ")")
+      $e.nbTextes = $textes.Count
+    }
+    if ($e.lectures -le 2) { $e.present = $niveau1; $e.candidat = $false; $e.rejouer = $rejouer; continue }
+    $recent = $script:etat.comptees[$h]
+    $dejaComptee = $recent -and ((Get-Date) - $recent).TotalSeconds -lt $DelaiMemePartie
+    # signal 1 : niveau 1 qui apparaît
+    if ($niveau1 -and -not $e.present) {
       if ($e.candidat) {
         $e.present = $true
         $e.candidat = $false
-        $recent = $script:etat.comptees[$h]
-        if ($recent -and ((Get-Date) - $recent).TotalSeconds -lt $DelaiMemePartie) {
-          Journal ("Niveau 1 affiché dans « " + $titre + " » : partie déjà comptée.")
-        } else {
-          Journal ("Nouvelle partie (niveau 1 affiché) dans « " + $titre + " ».")
-          Compter-Partie-Fenetre $h "niveau 1"
-        }
+        if ($dejaComptee) { Journal ("Niveau 1 affiché dans « " + $titre + " » : partie déjà comptée.") }
+        else { Journal ("Nouvelle partie (niveau 1 affiché) dans « " + $titre + " »."); Compter-Partie-Fenetre $h "niveau 1"; $dejaComptee = $true }
       } else {
         $e.candidat = $true
       }
-    } elseif (-not $present) {
+    } elseif (-not $niveau1) {
       $e.present = $false
       $e.candidat = $false
     }
+    # signal 2 : bouton de fin de partie qui disparaît (la fenêtre est toujours là)
+    if ($e.rejouer -and -not $rejouer) {
+      if ($dejaComptee) { Journal ("Bouton rejouer disparu de « " + $titre + " » : partie déjà comptée.") }
+      else { Journal ("Nouvelle partie (relance) dans « " + $titre + " »."); Compter-Partie-Fenetre $h "relance" }
+    } elseif ($rejouer -and -not $e.rejouer) {
+      Journal ("Fin de partie affichée dans « " + $titre + " ».")
+    }
+    $e.rejouer = $rejouer
   }
 }
 
@@ -849,7 +918,7 @@ function Lecture-Interieure($fenetres) {
     if ($resultat -and $resultat.Count -gt 0 -and $resultat[0]) { Traiter-Lecture $resultat[0] }
   }
   if (((Get-Date) - $script:derniereLecture).TotalSeconds -lt 12) { return }
-  $cibles = @($fenetres | Where-Object { Est-FenetreDePartie $_ } | ForEach-Object { $_.Hwnd })
+  $cibles = @($fenetres | Where-Object { (Est-FenetreDePartie $_) -and -not $script:etat.jumelles.ContainsKey($_.Hwnd) } | ForEach-Object { $_.Hwnd })
   if ($cibles.Count -eq 0) { return }
   if (-not $script:runspaceLecture) {
     $script:runspaceLecture = [runspacefactory]::CreateRunspace()
@@ -1095,6 +1164,8 @@ function Passage-Veille {
         $script:etat.connues = @{}
         $script:etat.niveau1 = @{}
         $script:etat.comptees = @{}
+        $script:etat.tables = @{}
+        $script:etat.jumelles = @{}
         Journal "Betclic fermé."
         if ($Veille) { $window.Hide() }
         Rafraichir
@@ -1119,14 +1190,18 @@ function Passage-Veille {
     # Les navigateurs intégrés (captcha, pages web) n'ouvrent jamais de table.
     $fenetres = @($fenetres | Where-Object { -not ($nomsProc.ContainsKey($_.ProcId) -and ($ProcessusSansTable -contains $nomsProc[$_.ProcId])) })
     $presentes = @{}
+    $candidates = New-Object System.Collections.Generic.List[object]
     foreach ($f in $fenetres) {
       $presentes[$f.Hwnd] = $true
       if ($script:etat.connues.ContainsKey($f.Hwnd)) {
         $ancien = $script:etat.connues[$f.Hwnd]
         if ($ancien -ne $f.Titre) {
           $script:etat.connues[$f.Hwnd] = $f.Titre
-          if (Est-TitrePartie $f.Titre) {
+          if ($script:etat.jumelles.ContainsKey($f.Hwnd)) {
+            Journal ("Titre changé (fenêtre jumelle, ignorée) : « " + $ancien + " » → « " + $f.Titre + " »")
+          } elseif (Est-TitrePartie $f.Titre) {
             Journal ("Nouvelle partie dans une fenêtre existante : « " + $ancien + " » → « " + $f.Titre + " »")
+            $script:etat.tables[$f.Hwnd] = $true
             Compter-Partie-Fenetre $f.Hwnd "fenêtre renommée"
           } elseif ((Est-TitrePartie $ancien) -or $f.Largeur -ge $TailleMinTable) {
             Journal ("Titre changé : « " + $ancien + " » → « " + $f.Titre + " »")
@@ -1135,21 +1210,39 @@ function Passage-Veille {
         continue
       }
       $script:etat.connues[$f.Hwnd] = $f.Titre
-      if ($premierPassage) {
-        Journal ("Fenêtre déjà ouverte, non comptée : " + (Libelle-Fenetre $f))
-      } elseif (Est-FenetreDePartie $f) {
-        Journal ("Table détectée : " + (Libelle-Fenetre $f))
-        Compter-Partie-Fenetre $f.Hwnd "fenêtre"
-      } elseif ($f.Largeur -ge $TailleMinTable -and $f.Hauteur -ge $TailleMinTable) {
+      if (Est-FenetreDePartie $f) {
+        $candidates.Add($f)
+      } elseif (-not $premierPassage -and $f.Largeur -ge $TailleMinTable -and $f.Hauteur -ge $TailleMinTable) {
         Journal ("Nouvelle fenêtre, non comptée (titre hors -MotifTable) : " + (Libelle-Fenetre $f))
+      } elseif ($premierPassage -and $f.Largeur -ge $TailleMinTable -and $f.Hauteur -ge $TailleMinTable) {
+        Journal ("Fenêtre déjà ouverte, non comptée : " + (Libelle-Fenetre $f))
+      }
+    }
+    if ($candidates.Count -gt 0) {
+      $groupes = Regrouper-Jumelles $candidates $script:etat.tables
+      foreach ($h in $groupes.jumelles.Keys) {
+        $script:etat.jumelles[$h] = $groupes.jumelles[$h]
+        $fj = $candidates | Where-Object { $_.Hwnd -eq $h } | Select-Object -First 1
+        Journal ("Fenêtre jumelle d'une table, ignorée : " + (Libelle-Fenetre $fj) + " → principale " + $groupes.jumelles[$h])
+      }
+      foreach ($pfen in $groupes.principales) {
+        $script:etat.tables[$pfen.Hwnd] = $true
+        if ($premierPassage) {
+          Journal ("Table déjà ouverte, non comptée : " + (Libelle-Fenetre $pfen))
+        } else {
+          Journal ("Table détectée : " + (Libelle-Fenetre $pfen))
+          Compter-Partie-Fenetre $pfen.Hwnd "fenêtre"
+        }
       }
     }
     foreach ($cle in @($script:etat.connues.Keys)) {
       if (-not $presentes.ContainsKey($cle)) {
-        if (Est-TitrePartie $script:etat.connues[$cle]) { Journal ("Fenêtre de table fermée : « " + $script:etat.connues[$cle] + " »") }
+        if ((Est-TitrePartie $script:etat.connues[$cle]) -and -not $script:etat.jumelles.ContainsKey($cle)) { Journal ("Fenêtre de table fermée : « " + $script:etat.connues[$cle] + " » (hwnd $cle)") }
         $script:etat.connues.Remove($cle)
         $script:etat.niveau1.Remove($cle)
         $script:etat.comptees.Remove($cle)
+        $script:etat.tables.Remove($cle)
+        $script:etat.jumelles.Remove($cle)
       }
     }
     if (-not $SansLectureInterieure) { Lecture-Interieure $fenetres }
@@ -1180,7 +1273,7 @@ $timerVeille.Add_Tick({ Passage-Veille })
 $timerVeille.Start()
 
 if ($Veille) {
-  Journal ("Veille démarrée (version $Version) : processus '$Processus', titres de partie '" + ($MotifsTable -join " | ") + "', niveau 1 '" + ($MotifsDepart -join " | ") + "'" + $(if ($SansLectureInterieure) { ", sans lecture intérieure" } else { "" }) + $(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" }) + ", dossier $Dossier")
+  Journal ("Veille démarrée (version $Version) : processus '$Processus', titres de partie '" + ($MotifsTable -join " | ") + "', niveau 1 '" + ($MotifsDepart -join " | ") + "', rejouer '" + ($MotifsRejouer -join " | ") + "'" + $(if ($SansLectureInterieure) { ", sans lecture intérieure" } else { "" }) + $(if ($DossierHistoriques) { ", historiques $DossierHistoriques" } else { "" }) + ", dossier $Dossier")
   Passage-Veille
 } else {
   Journal "HUD ouvert (version $Version)."

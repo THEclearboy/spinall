@@ -45,13 +45,16 @@ Comment les parties sont comptées
   apparaît avec un tel titre, ou dont le titre le devient (une fenêtre « Betclic Poker Table » qui
   passe à « Spin & Rush… »), c'est une partie, à tout moment. Le lobby, le sélecteur de fichiers, le
   captcha et les menus ne comptent jamais : seuls les titres de -MotifTable comptent.
-  En complément, le HUD lit en arrière-plan l'intérieur des fenêtres de table (MSAA, lecture seule) :
-  si le niveau de blinds 1 « 10 - 20 » réapparaît dans une fenêtre réutilisée, c'est une nouvelle partie.
+  Betclic ouvre parfois deux fenêtres pour une même table (même titre, même instant) : la deuxième est
+  ignorée. Quand une partie est relancée dans la même fenêtre, le HUD lit l'intérieur de la fenêtre
+  (MSAA, lecture seule, en arrière-plan) : le niveau de blinds 1 « 10 - 20 » qui apparaît, ou le bouton
+  « Rejouer » qui disparaît alors que la fenêtre reste ouverte, comptent une nouvelle partie.
 
 Réglages (à écrire après la commande, ex. : installer-hud-betclic.cmd -MotifTable "Spin & Rush*")
   -Processus "*betclic*"    nom du processus du client (Gestionnaire des tâches → Détails)
   -MotifTable "Spin & Rush*|Expresso*|Spin & Go*"   titres des fenêtres de table (séparés par |)
   -MotifDepart "10 - 20|10-20|10 / 20"   texte du niveau de blinds 1 (lecture intérieure)
+  -MotifRejouer "Rejouer*|Relancer*|Nouvelle partie*|Jouer encore*|Play again*"   bouton de fin de partie
   -SansLectureInterieure    ne compter que par les titres de fenêtres
   -DelaiMemePartie 90       secondes après une partie comptée où le niveau 1 de la même fenêtre ne recompte pas
   -TailleMinTable 300       taille minimale d'une fenêtre de table
