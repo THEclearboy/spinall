@@ -73,7 +73,7 @@ param(
   [string]$Dossier = (Join-Path $env:LOCALAPPDATA "Expresso Trainer")
 )
 
-$Version = "2026-10-19.1"
+$Version = "2026-10-20.1"
 $ErrorActionPreference = "Stop"
 trap {
   # Erreur fatale (console cachée) : on la note et on l'affiche avant de s'arrêter.
@@ -728,6 +728,7 @@ $script:etat = @{
   passage = 0
   tablesVues = 0
   quitter = $false
+  rangeParUtilisateur = $false   # HUD rangé par × ou Échap : on ne le réaffiche qu'à la demande
 }
 $FichierSession = Join-Path $Dossier "session.json"
 $FichierSessions = Join-Path $Dossier "sessions.csv"
@@ -823,6 +824,19 @@ function Compter-Partie-Fenetre([string]$hwnd, [string]$origine) {
   $script:etat.tablesVues += 1
   $script:etat.comptees[$hwnd] = Get-Date
   Ajouter-Partie 1 $origine
+  Remettre-Au-Dessus
+}
+
+# Une fenêtre de table peut recouvrir le HUD (les deux sont « toujours au-dessus ») : on le remonte,
+# et on le réaffiche s'il a été caché par le programme (pas par l'utilisateur).
+function Remettre-Au-Dessus {
+  if (-not $window) { return }
+  if ($window.IsVisible) {
+    $window.Topmost = $false
+    $window.Topmost = $true
+  } elseif (-not $script:etat.rangeParUtilisateur) {
+    Afficher-Hud
+  }
 }
 
 $script:runspaceLecture = $null
@@ -948,6 +962,7 @@ function Lecture-Interieure($fenetres) {
 
 # ======================================================= fenêtre WPF
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
+Add-Type -AssemblyName System.Windows.Forms, System.Drawing
 
 $xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -1054,18 +1069,31 @@ function Placer-Fenetre {
   }
 }
 
-function Afficher-Hud {
-  if (-not $window.IsVisible) { $window.Show() }
+function Afficher-Hud([switch]$ParUtilisateur) {
+  if ($ParUtilisateur) { $script:etat.rangeParUtilisateur = $false }
+  if (-not $window.IsVisible) {
+    $window.Show()
+    Journal "HUD affiché."
+  }
+  $window.Topmost = $false
+  $window.Topmost = $true
   Rafraichir
 }
 
 function Ranger-Hud {
-  if ($Veille) { $window.Hide() } else { Quitter }
+  if ($Veille) {
+    $script:etat.rangeParUtilisateur = $true
+    $window.Hide()
+    Journal "HUD rangé (× ou Échap) : double-clic sur l'icône de la zone de notification pour le rappeler."
+  } else {
+    Quitter
+  }
 }
 
 function Quitter {
   $script:etat.quitter = $true
   Sauver-Session
+  try { if ($tray) { $tray.Visible = $false; $tray.Dispose() } } catch {}
   try { if ($script:lectureEnCours) { $script:lectureEnCours.ps.Stop() } } catch {}
   try { if ($script:runspaceLecture) { $script:runspaceLecture.Close() } } catch {}
   try { $window.Close() } catch {}
@@ -1130,7 +1158,7 @@ foreach ($entree in @(
       [void][System.Windows.MessageBox]::Show($window, $resultat, "HUD Expresso Trainer")
     } },
   @{ texte = "Mettre à jour le HUD (dernière version)"; action = {
-      try { Mettre-A-Jour; $script:etat.quitter = $true } catch { Journal ("Mise à jour impossible : " + $_.Exception.Message) }
+      try { Mettre-A-Jour; Journal "Mise à jour lancée : le HUD redémarre dans quelques secondes."; Quitter } catch { Journal ("Mise à jour impossible : " + $_.Exception.Message) }
     } },
   @{ texte = "Ouvrir le dossier (journal, sessions)"; action = { Start-Process $Dossier } },
   @{ texte = "Ouvrir Expresso Trainer (site)"; action = { Start-Process $UrlSite } },
@@ -1143,6 +1171,36 @@ foreach ($entree in @(
   [void]$menu.Items.Add($item)
 }
 $window.ContextMenu = $menu
+
+# ---- icône dans la zone de notification : le HUD se rappelle d'un double-clic, même rangé
+function Creer-IconeLime {
+  $bmp = New-Object System.Drawing.Bitmap 32, 32
+  $g = [System.Drawing.Graphics]::FromImage($bmp)
+  $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $g.Clear([System.Drawing.Color]::Transparent)
+  $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 217, 255, 90))), 1, 1, 30, 30)
+  $g.FillEllipse((New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(255, 0, 0, 0))), 10, 10, 12, 12)
+  $g.Dispose()
+  return [System.Drawing.Icon]::FromHandle($bmp.GetHicon())
+}
+$tray = $null
+try {
+  $tray = New-Object System.Windows.Forms.NotifyIcon
+  $tray.Icon = Creer-IconeLime
+  $tray.Text = "HUD Expresso Trainer : clic pour afficher"
+  $menuTray = New-Object System.Windows.Forms.ContextMenuStrip
+  [void]$menuTray.Items.Add("Afficher le HUD", $null, { Afficher-Hud -ParUtilisateur })
+  [void]$menuTray.Items.Add("Terminer la session", $null, { Terminer-Session })
+  [void]$menuTray.Items.Add("Remettre à zéro", $null, { Remettre-A-Zero })
+  [void]$menuTray.Items.Add("Ouvrir le dossier (journal, sessions)", $null, { Start-Process $Dossier })
+  [void]$menuTray.Items.Add("Version $Version", $null, { [void][System.Windows.MessageBox]::Show("HUD Expresso Trainer`nversion $Version`n`nDossier : $Dossier", "HUD Expresso Trainer") })
+  [void]$menuTray.Items.Add("Quitter le HUD", $null, { Quitter })
+  $tray.ContextMenuStrip = $menuTray
+  $tray.add_MouseClick({ param($s, $e) if ($e.Button -eq [System.Windows.Forms.MouseButtons]::Left) { Afficher-Hud -ParUtilisateur } })
+  $tray.Visible = $true
+} catch {
+  Journal ("Icône de notification indisponible : " + $_.Exception.Message)
+}
 # Une erreur dans un gestionnaire d'événement ne doit pas fermer le HUD.
 $window.Dispatcher.Add_UnhandledException({
   param($s, $e)
@@ -1155,7 +1213,7 @@ function Passage-Veille {
   try {
     if (Test-Path $FichierAfficher) {
       Remove-Item $FichierAfficher -ErrorAction SilentlyContinue
-      Afficher-Hud
+      Afficher-Hud -ParUtilisateur
     }
     $procs = Processus-Betclic
     if ($procs.Count -eq 0) {
@@ -1264,7 +1322,16 @@ Rafraichir
 
 $timerHorloge = New-Object System.Windows.Threading.DispatcherTimer
 $timerHorloge.Interval = [TimeSpan]::FromSeconds(1)
-$timerHorloge.Add_Tick({ if ($window.IsVisible) { Rafraichir } })
+$script:tic = 0
+$timerHorloge.Add_Tick({
+  if ($window.IsVisible) { Rafraichir }
+  $script:tic += 1
+  # toutes les 10 s : repasser au-dessus des fenêtres de table (elles aussi « toujours au-dessus »)
+  if (($script:tic % 10 -eq 0) -and $script:etat.betclicVu -and $window.IsVisible) {
+    $window.Topmost = $false
+    $window.Topmost = $true
+  }
+})
 $timerHorloge.Start()
 
 $timerVeille = New-Object System.Windows.Threading.DispatcherTimer

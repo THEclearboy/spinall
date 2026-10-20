@@ -29,6 +29,8 @@ Au quotidien
   - +1 / −1 corrigent à la main ; touches + (ou Entrée) et − quand la fenêtre est active.
   - ↺ (deux clics) remet le chrono et les parties à zéro, par exemple après une partie comptée à tort.
   - Glisse la fenêtre où tu veux, sa position est mémorisée. Échap ou × la range ; clic droit → menu.
+  - Rangée ou recouverte ? Clic sur le rond vert dans la zone de notification (près de l'horloge) ou
+    double-clic sur hud-betclic.cmd : elle revient au-dessus. Elle remonte aussi à chaque nouvelle table.
   - Clic droit → « Terminer la session » archive la session dans sessions.csv (ouvrable avec Excel) ;
     « Remettre à zéro » efface la session en cours sans l'archiver (partie comptée à tort, par exemple).
     Sinon, une nouvelle session commence toute seule après 2 h sans activité.
