@@ -26,6 +26,25 @@ npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 ```
 
 
+## Mode entraînement
+
+Pour s'entraîner à jouer plus de tables sans fausser ses stats (souvent à 0,20 €) :
+
+- Après un import, la barre d'import propose de marquer les nouvelles parties
+  d'une limite comme **entraînement** (0,20 € mis en avant). Le marquage est
+  posé sur les mains (`main.entrainement = true`, persisté avec la base) ;
+  `src/lib/mode-entrainement.js` porte la logique (`marquerParties`,
+  `idsParLimiteEtPeriode`, `filtrerMode`, `tablesSimultanees`, `comparerEntrainement`).
+- Dès qu'il existe des parties d'entraînement, un segment **Normal · Entraînement
+  · Tout** apparaît à côté des limites : par défaut, toutes les tuiles (et le
+  bilan en image) excluent l'entraînement.
+- Tuile **Entraînement vs normal** : sur la limite choisie, parties, respect des
+  ranges pré-flop, cEV et réel par partie, ROI, gain net, victoires, parties par
+  heure, tables en même temps (moyenne et pic, d'après le chevauchement des
+  parties), heures, VPIP, PFR, avec l'écart entraînement moins normal. Un
+  formulaire replié permet de marquer ou démarquer des parties par limite et
+  période.
+
 ## HUD de session
 
 Deux HUD, au choix.

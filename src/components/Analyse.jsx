@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bento, Tuile, Pilule } from "./ui/Tuile.jsx";
 import { Chargement, Tourne } from "./ui/Chargement.jsx";
 import { PartageImage } from "./PartageImage.jsx";
@@ -20,6 +20,17 @@ import { parseFichier, empreinteFichier, resultatJoueur } from "../lib/historiqu
 import { lireZip, sansBom } from "../lib/zip.js";
 import { bilanParLimite, limitesPresentes } from "../lib/limites.js";
 import { heuresParJour, totalHeuresMois, formatHeures } from "../lib/heures.js";
+import {
+  LIMITE_ENTRAINEMENT_DEFAUT,
+  partiesDe,
+  partiesParLimite,
+  marquerParties,
+  idsParLimiteEtPeriode,
+  filtrerMode,
+  comparerEntrainement,
+  limiteComparaisonParDefaut,
+} from "../lib/mode-entrainement.js";
+import { Comparaison } from "./Comparaison.jsx";
 import { lireLocal, ecrireLocal } from "../lib/stockage.js";
 import { euros, pourcent, dateHeure, ordinal, pluriel, formatBbArrondi } from "../lib/format.js";
 
@@ -55,9 +66,19 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
 
   const limites = useMemo(() => limitesPresentes(analyse.mains), [analyse.mains]);
   const limiteActive = limite !== null && limites.includes(limite) ? limite : null;
+  // Mode : les parties d'entraînement (multi-tables à petite limite) sont tenues à l'écart des stats normales.
+  const [mode, setMode] = useState("normal");
+  const [dernierImport, setDernierImport] = useState(null);
+  const [limiteComparaison, setLimiteComparaison] = useState(null);
+  const aDesEntrainements = useMemo(() => analyse.mains.some((m) => m.entrainement), [analyse.mains]);
+  const modeActif = aDesEntrainements ? mode : "tout";
   const mainsScope = useMemo(
-    () => (limiteActive === null ? analyse.mains : analyse.mains.filter((m) => m.buyIn === limiteActive)),
-    [analyse.mains, limiteActive],
+    () => filtrerMode(limiteActive === null ? analyse.mains : analyse.mains.filter((m) => m.buyIn === limiteActive), modeActif),
+    [analyse.mains, limiteActive, modeActif],
+  );
+  const marquer = useCallback(
+    (ids, valeur) => setAnalyse((a) => ({ ...a, mains: marquerParties(a.mains, ids, valeur) })),
+    [setAnalyse],
   );
   const stats = useMemo(() => calculerStats(mainsScope, charts), [mainsScope, charts]);
   const spotParMain = useMemo(() => {
@@ -164,6 +185,10 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
         }
       }
       if (ignores > 0) messages.push(`${pluriel("fichier ignoré", ignores)} (seuls les .txt et .zip sont lus)`);
+      if (nouvellesMains.length > 0) {
+        const nouvellesParties = partiesDe(nouvellesMains);
+        setDernierImport({ parties: nouvellesParties, parLimite: partiesParLimite(nouvellesParties), decision: null });
+      }
       if (nouvellesMains.length > 0 || nouveauxFichiers.length > 0)
         setAnalyse((a) => {
           const ids = new Set(a.mains.map((m) => m.id));
@@ -252,7 +277,9 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   );
   const nbPartiesPeriode = partiesRecentes.reduce((s, j) => s + j.nb, 0);
   const roi = stats.investi > 0 ? stats.netEuro / stats.investi : null;
-  const libelleScope = limiteActive === null ? "toutes limites" : `limite ${euros(limiteActive)}`;
+  const libelleScope =
+    (limiteActive === null ? "toutes limites" : `limite ${euros(limiteActive)}`) +
+    (modeActif === "normal" ? " · hors entraînement" : modeActif === "entrainement" ? " · entraînement" : "");
 
   const nbFichiers = (analyse.fichiers || []).length;
   const dernierJour = mainsScope.reduce((max, m) => (m.date && m.date > max ? m.date : max), 0);
@@ -304,6 +331,19 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
               ))}
             </div>
           )}
+          {aDesEntrainements && (
+            <div className="segment" title="Les parties marquées entraînement sont tenues à l'écart des stats normales">
+              {[
+                ["normal", "Normal"],
+                ["entrainement", "Entraînement"],
+                ["tout", "Tout"],
+              ].map(([id, nom]) => (
+                <button key={id} className={mode === id ? "actif" : ""} onClick={() => setMode(id)}>
+                  {nom}
+                </button>
+              ))}
+            </div>
+          )}
           {analyse.mains.length > 0 && (
             <>
               <Pilule variante="blanc" onClick={() => setPartageOuvert(true)} titre="Générer une image du bilan à envoyer">
@@ -333,6 +373,71 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           e.target.value = "";
         }}
       />
+      {dernierImport && dernierImport.parties.length > 0 && (
+        <div className="apres-import">
+          {dernierImport.decision === null ? (
+            <>
+              <p className="muet">
+                <strong>{pluriel("nouvelle partie", dernierImport.parties.length)}</strong> (
+                {dernierImport.parLimite.map((l) => `${l.limite === null ? "limite inconnue" : euros(l.limite)} : ${l.parties}`).join(" · ")}
+                ). De l'entraînement dedans ? Les parties marquées restent à l'écart de tes stats normales.
+              </p>
+              <div className="pilules">
+                {dernierImport.parLimite.map((l) => (
+                  <Pilule
+                    key={String(l.limite)}
+                    variante={l.limite === LIMITE_ENTRAINEMENT_DEFAUT ? "lime" : "clair"}
+                    classe={l.limite === LIMITE_ENTRAINEMENT_DEFAUT ? "" : "sur-sombre"}
+                    onClick={() => {
+                      const ids = dernierImport.parties.filter((p) => p.limite === l.limite).map((p) => p.id);
+                      marquer(ids, true);
+                      setDernierImport({ ...dernierImport, decision: { limite: l.limite, ids } });
+                    }}
+                  >
+                    Entraînement à {l.limite === null ? "limite inconnue" : euros(l.limite)} ({l.parties})
+                  </Pilule>
+                ))}
+                {dernierImport.parLimite.length > 1 && (
+                  <Pilule
+                    variante="clair"
+                    classe="sur-sombre"
+                    onClick={() => {
+                      const ids = dernierImport.parties.map((p) => p.id);
+                      marquer(ids, true);
+                      setDernierImport({ ...dernierImport, decision: { limite: null, ids } });
+                    }}
+                  >
+                    Tout l'import en entraînement
+                  </Pilule>
+                )}
+                <Pilule variante="clair" classe="sur-sombre" onClick={() => setDernierImport(null)}>
+                  Non, tout est normal
+                </Pilule>
+              </div>
+            </>
+          ) : (
+            <p className="muet">
+              {pluriel("partie", dernierImport.decision.ids.length)}
+              {dernierImport.decision.limite === null ? "" : ` à ${euros(dernierImport.decision.limite)}`} marquée
+              {dernierImport.decision.ids.length > 1 ? "s" : ""} entraînement.{" "}
+              <button
+                className="lien"
+                type="button"
+                onClick={() => {
+                  marquer(dernierImport.decision.ids, false);
+                  setDernierImport({ ...dernierImport, decision: null });
+                }}
+              >
+                Annuler
+              </button>
+              {" · "}
+              <button className="lien" type="button" onClick={() => setDernierImport(null)}>
+                OK
+              </button>
+            </p>
+          )}
+        </div>
+      )}
       {(rapport?.length > 0 || nbFichiers > 0) && (
         <div className="barre-import-details">
           {rapport && rapport.length > 0 && (
@@ -497,6 +602,20 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
             </table>
           </div>
         </Tuile>
+
+        {/* ---- Entraînement vs normal ---- */}
+        {aDesEntrainements && (
+          <Comparaison
+            mains={analyse.mains}
+            charts={charts}
+            parMain={calculEvTotal.parMain}
+            limite={limiteComparaison !== null ? limiteComparaison : limiteComparaisonParDefaut(analyse.mains)}
+            setLimite={setLimiteComparaison}
+            limites={limites}
+            marquer={marquer}
+            idsParLimiteEtPeriode={(l, d, f) => idsParLimiteEtPeriode(analyse.mains, l, d, f)}
+          />
+        )}
 
         {/* ---- Niveau 2 : tendances ---- */}
         <Tuile

@@ -2785,6 +2785,66 @@ body.hud-fenetre .hud {
   user-select: none;
 }
 
+/* ------------------------------------------------- mode entraînement */
+.apres-import {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(217, 255, 90, 0.08);
+  border: 1px solid rgba(217, 255, 90, 0.25);
+}
+.apres-import p {
+  margin: 0 0 8px;
+}
+button.lien {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--lime);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.comparaison th:not(:first-child),
+.comparaison td:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+.comparaison td:first-child {
+  color: var(--t-muet);
+}
+.comparaison .ecart {
+  font-weight: 800;
+}
+.comparaison .ecart.positif {
+  color: var(--lime);
+}
+.comparaison .ecart.negatif {
+  color: var(--orange);
+}
+.marquage summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.formulaire-marquage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 0.85rem;
+}
+.formulaire-marquage select,
+.formulaire-marquage input {
+  background: var(--sombre-2);
+  color: var(--texte);
+  border: 1px solid var(--separateur);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font: inherit;
+  color-scheme: dark;
+}
+
 /* Fenêtres modales sur mobile : feuille collée en bas de l'écran. */
 @media (max-width: 640px) {
   .voile {

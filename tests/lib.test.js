@@ -289,3 +289,55 @@ test("surveillance du dossier : fichiers existants ignorés, nouvelles parties c
   r = await scanner(surv, maintenant + 15_000);
   assert.deepEqual(r.nouvelles, []);
 });
+
+test("entraînement : marquage, filtre, tables simultanées, comparaison", async () => {
+  const e = await import("../src/lib/mode-entrainement.js");
+  const charts = construireCharts(donnees);
+  const { mains } = parseFichier(historique);
+  const parties = e.partiesDe(mains);
+  assert.equal(parties.length, 6);
+  assert.ok(parties.every((p) => !p.entrainement));
+  // marquage de deux parties à 0,20 € par période (les deux premières)
+  const deux = new Set(parties.filter((p) => p.limite === parties[0].limite).slice(0, 2).map((p) => p.id));
+  assert.equal(deux.size, 2, "la limite de la première partie en a au moins deux");
+  const marquees = e.marquerParties(mains, deux, true);
+  assert.equal(e.partiesDe(marquees).filter((p) => p.entrainement).length, 2);
+  assert.equal(e.filtrerMode(marquees, "entrainement").length + e.filtrerMode(marquees, "normal").length, mains.length);
+  assert.equal(e.filtrerMode(marquees, "tout").length, mains.length);
+  // mains non concernées : mêmes objets (pas de copie inutile)
+  assert.ok(marquees.some((m, i) => m === mains[i]));
+  // démarquage
+  const demarquees = e.marquerParties(marquees, deux, false);
+  assert.equal(e.partiesDe(demarquees).filter((p) => p.entrainement).length, 0);
+  assert.ok(!("entrainement" in demarquees.find((m) => deux.has(m.partieId))));
+  // sélection par limite et période
+  const ids = e.idsParLimiteEtPeriode(mains, parties[0].limite, parties[0].date, parties[0].date);
+  assert.ok(ids.has(parties[0].id));
+  assert.deepEqual([...e.partiesParLimite(parties)].map((l) => l.parties).reduce((a, b) => a + b, 0), 6);
+  // tables simultanées : deux parties qui se chevauchent entièrement → moyenne 2, max 2
+  const t0 = Date.parse("2026-10-20T20:00:00Z");
+  const synth = [
+    { id: "a1", partieId: "A", date: t0 },
+    { id: "a2", partieId: "A", date: t0 + 5 * 60_000 },
+    { id: "b1", partieId: "B", date: t0 },
+    { id: "b2", partieId: "B", date: t0 + 5 * 60_000 },
+    { id: "c1", partieId: "C", date: t0 + 20 * 60_000 },
+    { id: "c2", partieId: "C", date: t0 + 26 * 60_000 },
+  ];
+  const tables = e.tablesSimultanees(synth);
+  assert.equal(tables.max, 2);
+  assert.equal(tables.parties, 3);
+  // A et B : 6 min chacune en parallèle (6 min couvertes), C : 7 min seule → (6+6+7)/13
+  assert.ok(Math.abs(tables.moyenne - 19 / 13) < 1e-9);
+  assert.equal(e.tablesSimultanees([]).max, 0);
+  // heures de jeu : une session de 26 min + 1 min
+  assert.ok(Math.abs(e.heuresDeJeu(synth) - 27 / 60) < 1e-9);
+  // comparaison sur la limite des parties marquées
+  const cmp = e.comparerEntrainement(marquees, charts, null, parties[0].limite);
+  assert.equal(cmp.entrainement.parties, 2);
+  assert.ok(cmp.normal.parties + cmp.entrainement.parties <= 6);
+  assert.equal(cmp.entrainement.cEV, null, "sans calcul d'EV, cEV inconnu");
+  assert.deepEqual(cmp.limitesEntrainement, [parties[0].limite]);
+  assert.equal(e.limiteComparaisonParDefaut(marquees), parties[0].limite);
+  assert.equal(e.limiteComparaisonParDefaut(mains), null);
+});
