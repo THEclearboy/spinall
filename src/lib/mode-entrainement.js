@@ -28,17 +28,32 @@ export function partiesParLimite(parties) {
   return [...compte.entries()].map(([limite, nb]) => ({ limite, parties: nb })).sort((a, b) => (a.limite ?? 0) - (b.limite ?? 0));
 }
 
-/** Marque (ou démarque) les mains des parties données. Les autres mains sont inchangées. */
-export function marquerParties(mains, ids, valeur = true) {
+/**
+ * Marque (ou démarque) les mains des parties données. tables : nombre de tables jouées en même
+ * temps, déclaré à l'import (null = non précisé). Les autres mains sont inchangées.
+ */
+export function marquerParties(mains, ids, valeur = true, tables = null) {
   const cibles = ids instanceof Set ? ids : new Set(ids);
   return mains.map((m) => {
     if (!m.partieId || !cibles.has(m.partieId)) return m;
-    if (!!m.entrainement === valeur) return m;
+    const tablesVoulues = valeur && tables ? tables : undefined;
+    if (!!m.entrainement === valeur && (m.tables ?? undefined) === tablesVoulues) return m;
     const copie = { ...m };
-    if (valeur) copie.entrainement = true;
-    else delete copie.entrainement;
+    if (valeur) {
+      copie.entrainement = true;
+      if (tablesVoulues) copie.tables = tablesVoulues;
+      else delete copie.tables;
+    } else {
+      delete copie.entrainement;
+      delete copie.tables;
+    }
     return copie;
   });
+}
+
+/** Nombres de tables déclarés sur les parties d'entraînement, triés : [2, 4, …]. */
+export function tablesDeclarees(mains) {
+  return [...new Set(mains.filter((m) => m.entrainement && m.tables).map((m) => m.tables))].sort((a, b) => a - b);
 }
 
 /** Ids des parties d'une limite jouées entre debut et fin (bornes incluses, horodatages ms ; null = sans borne). */
@@ -129,8 +144,20 @@ export function resumerMode(mains, charts, parMain) {
   const heures = heuresDeJeu(mains);
   const ev = sommesEv(mains, parMain);
   const tables = tablesSimultanees(mains);
+  // tables déclarées à l'import : moyenne pondérée par partie, et étendue
+  let sommeTables = 0;
+  let partiesAvecTables = 0;
+  for (const p of partiesDe(mains)) {
+    const main = mains.find((m) => m.partieId === p.id && m.tables);
+    if (main) {
+      sommeTables += main.tables;
+      partiesAvecTables += 1;
+    }
+  }
   return {
     parties: nbParties,
+    tablesDeclarees: partiesAvecTables ? sommeTables / partiesAvecTables : null,
+    partiesAvecTables,
     nbMains: stats.nbMains,
     conformite: stats.tauxConformite,
     nbSpots: stats.spots.length,
@@ -154,14 +181,18 @@ export function resumerMode(mains, charts, parMain) {
  * Renvoie { limite, normal, entrainement, limitesEntrainement } ; limitesEntrainement liste les
  * limites qui ont des parties d'entraînement, pour proposer un choix.
  */
-export function comparerEntrainement(mains, charts, parMain, limite = null) {
+export function comparerEntrainement(mains, charts, parMain, limite = null, tables = null) {
   const cibles = limite === null ? mains : mains.filter((m) => m.buyIn === limite);
   const limitesEntrainement = [...new Set(mains.filter((m) => m.entrainement).map((m) => m.buyIn))].sort((a, b) => a - b);
+  let entrainement = filtrerMode(cibles, "entrainement");
+  if (tables !== null) entrainement = entrainement.filter((m) => m.tables === tables);
   return {
     limite,
+    tables,
     limitesEntrainement,
+    tablesDeclarees: tablesDeclarees(cibles),
     normal: resumerMode(filtrerMode(cibles, "normal"), charts, parMain),
-    entrainement: resumerMode(filtrerMode(cibles, "entrainement"), charts, parMain),
+    entrainement: resumerMode(entrainement, charts, parMain),
   };
 }
 

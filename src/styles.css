@@ -2822,6 +2822,22 @@ button.lien {
 .comparaison .ecart.negatif {
   color: var(--orange);
 }
+.champ-tables input,
+.formulaire-marquage input.court {
+  width: 64px;
+}
+.champ-tables {
+  font-size: 0.8rem;
+  color: var(--t-muet);
+}
+.champ-tables input {
+  background: var(--sombre-2);
+  color: var(--texte);
+  border: 1px solid var(--separateur);
+  border-radius: 10px;
+  padding: 6px 8px;
+  font: inherit;
+}
 .marquage summary {
   cursor: pointer;
   font-size: 0.8rem;

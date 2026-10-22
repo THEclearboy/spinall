@@ -20,17 +20,26 @@ function Valeur({ v, fmt, calcul }) {
  * face aux autres. Avec un petit formulaire pour marquer ou démarquer des parties.
  */
 export function Comparaison({ mains, charts, parMain, limite, setLimite, limites, marquer, idsParLimiteEtPeriode }) {
-  const cmp = useMemo(() => comparerEntrainement(mains, charts, parMain, limite), [mains, charts, parMain, limite]);
+  const [tables, setTables] = useState(null);
+  const cmp = useMemo(() => comparerEntrainement(mains, charts, parMain, limite, tables), [mains, charts, parMain, limite, tables]);
   const n = cmp.normal;
   const t = cmp.entrainement;
   const calcul = !parMain;
   const [formLimite, setFormLimite] = useState(limite ?? limites[0] ?? null);
   const [du, setDu] = useState("");
   const [au, setAu] = useState("");
+  const [formTables, setFormTables] = useState("");
   const [message, setMessage] = useState(null);
 
   const lignes = [
     { label: "Parties", n: n.parties, t: t.parties, fmt: (v) => String(v), fmtEcart: (d) => `${signe(d)}${d}` },
+    {
+      label: "Tables déclarées à l'import (moyenne)",
+      n: null,
+      t: t.tablesDeclarees,
+      fmt: (v, r) => `${unDecimal(v)}${r.partiesAvecTables < r.parties ? ` (${r.partiesAvecTables}/${r.parties} parties)` : ""}`,
+      fmtEcart: null,
+    },
     { label: "Respect des ranges pré-flop", n: n.conformite, t: t.conformite, fmt: pourcent, fmtEcart: points, sens: 1 },
     { label: "cEV / partie (jetons)", n: n.cEV, t: t.cEV, fmt: (v) => `${signe(v)}${unDecimal(v)}`, fmtEcart: (d) => `${signe(d)}${unDecimal(d)}`, sens: 1, calcul },
     { label: "Réel / partie (jetons)", n: n.reel, t: t.reel, fmt: (v) => `${signe(v)}${unDecimal(v)}`, fmtEcart: (d) => `${signe(d)}${unDecimal(d)}`, sens: 1, calcul },
@@ -60,8 +69,13 @@ export function Comparaison({ mains, charts, parMain, limite, setLimite, limites
       setMessage("Aucune partie ne correspond à cette limite et cette période.");
       return;
     }
-    marquer([...ids], valeur);
-    setMessage(`${pluriel("partie", ids.size)} ${valeur ? "marquée" : "remise"}${ids.size > 1 ? "s" : ""} ${valeur ? "entraînement" : "en normal"}.`);
+    const nbTables = formTables ? Number(formTables) : null;
+    marquer([...ids], valeur, nbTables);
+    setMessage(
+      `${pluriel("partie", ids.size)} ${valeur ? "marquée" : "remise"}${ids.size > 1 ? "s" : ""} ${valeur ? "entraînement" : "en normal"}${
+        valeur && nbTables ? `, ${nbTables} table${nbTables > 1 ? "s" : ""}` : ""
+      }.`,
+    );
   }
 
   return (
@@ -85,6 +99,21 @@ export function Comparaison({ mains, charts, parMain, limite, setLimite, limites
         )
       }
     >
+      {cmp.tablesDeclarees.length > 0 && (
+        <div className="pilules">
+          <span className="muet">Entraînement :</span>
+          <div className="segment">
+            <button className={tables === null ? "actif" : ""} onClick={() => setTables(null)} type="button">
+              toutes les sessions
+            </button>
+            {cmp.tablesDeclarees.map((nb) => (
+              <button key={nb} className={tables === nb ? "actif" : ""} onClick={() => setTables(nb)} type="button">
+                {nb === 1 ? "1 table" : `${nb} tables`}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <div className="defilant">
         <table className="tableau-limites comparaison">
           <thead>
@@ -141,6 +170,9 @@ export function Comparaison({ mains, charts, parMain, limite, setLimite, limites
           </label>
           <label>
             au <input type="date" value={au} onChange={(e) => setAu(e.target.value)} />
+          </label>
+          <label>
+            tables <input type="number" min="1" max="30" className="court" value={formTables} onChange={(e) => setFormTables(e.target.value)} placeholder="n" />
           </label>
           <Pilule variante="lime" onClick={() => appliquer(true)}>
             Marquer entraînement

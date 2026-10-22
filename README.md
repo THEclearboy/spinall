@@ -31,19 +31,23 @@ npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 Pour s'entraîner à jouer plus de tables sans fausser ses stats (souvent à 0,20 €) :
 
 - Après un import, la barre d'import propose de marquer les nouvelles parties
-  d'une limite comme **entraînement** (0,20 € mis en avant). Le marquage est
-  posé sur les mains (`main.entrainement = true`, persisté avec la base) ;
+  d'une limite comme **entraînement** (0,20 € mis en avant), puis demande le
+  nombre de tables jouées en même temps. Le marquage est posé sur les mains
+  (`main.entrainement = true`, `main.tables = n`, persisté avec la base) ;
   `src/lib/mode-entrainement.js` porte la logique (`marquerParties`,
   `idsParLimiteEtPeriode`, `filtrerMode`, `tablesSimultanees`, `comparerEntrainement`).
-- Dès qu'il existe des parties d'entraînement, un segment **Normal · Entraînement
-  · Tout** apparaît à côté des limites : par défaut, toutes les tuiles (et le
-  bilan en image) excluent l'entraînement.
+- Dès qu'il existe des parties d'entraînement, un segment **Tout · Normal ·
+  Entraînement** apparaît à côté des limites. Par défaut tout compte (gains,
+  stats, heures jouées, bilan en image) ; Normal et Entraînement isolent l'un
+  ou l'autre.
 - Tuile **Entraînement vs normal** : sur la limite choisie, parties, respect des
   ranges pré-flop, cEV et réel par partie, ROI, gain net, victoires, parties par
   heure, tables en même temps (moyenne et pic, d'après le chevauchement des
   parties), heures, VPIP, PFR, avec l'écart entraînement moins normal. Un
   formulaire replié permet de marquer ou démarquer des parties par limite et
-  période.
+  période. Quand des nombres de tables sont déclarés, un segment permet de
+  comparer le normal à l'entraînement à 2, 4… tables, et une ligne affiche la
+  moyenne déclarée face aux tables mesurées.
 
 ## HUD de session
 

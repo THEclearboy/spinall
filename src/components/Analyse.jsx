@@ -66,8 +66,8 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
 
   const limites = useMemo(() => limitesPresentes(analyse.mains), [analyse.mains]);
   const limiteActive = limite !== null && limites.includes(limite) ? limite : null;
-  // Mode : les parties d'entraînement (multi-tables à petite limite) sont tenues à l'écart des stats normales.
-  const [mode, setMode] = useState("normal");
+  // Mode : par défaut tout compte (gains, stats, heures) ; le segment isole le normal ou l'entraînement.
+  const [mode, setMode] = useState("tout");
   const [dernierImport, setDernierImport] = useState(null);
   const [limiteComparaison, setLimiteComparaison] = useState(null);
   const aDesEntrainements = useMemo(() => analyse.mains.some((m) => m.entrainement), [analyse.mains]);
@@ -77,7 +77,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
     [analyse.mains, limiteActive, modeActif],
   );
   const marquer = useCallback(
-    (ids, valeur) => setAnalyse((a) => ({ ...a, mains: marquerParties(a.mains, ids, valeur) })),
+    (ids, valeur, tables = null) => setAnalyse((a) => ({ ...a, mains: marquerParties(a.mains, ids, valeur, tables) })),
     [setAnalyse],
   );
   const stats = useMemo(() => calculerStats(mainsScope, charts), [mainsScope, charts]);
@@ -187,7 +187,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
       if (ignores > 0) messages.push(`${pluriel("fichier ignoré", ignores)} (seuls les .txt et .zip sont lus)`);
       if (nouvellesMains.length > 0) {
         const nouvellesParties = partiesDe(nouvellesMains);
-        setDernierImport({ parties: nouvellesParties, parLimite: partiesParLimite(nouvellesParties), decision: null });
+        setDernierImport({ parties: nouvellesParties, parLimite: partiesParLimite(nouvellesParties), choix: null, decision: null });
       }
       if (nouvellesMains.length > 0 || nouveauxFichiers.length > 0)
         setAnalyse((a) => {
@@ -332,11 +332,11 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
             </div>
           )}
           {aDesEntrainements && (
-            <div className="segment" title="Les parties marquées entraînement sont tenues à l'écart des stats normales">
+            <div className="segment" title="Tout : gains, stats et heures avec l'entraînement. Normal ou Entraînement : seulement ces parties-là.">
               {[
+                ["tout", "Tout"],
                 ["normal", "Normal"],
                 ["entrainement", "Entraînement"],
-                ["tout", "Tout"],
               ].map(([id, nom]) => (
                 <button key={id} className={mode === id ? "actif" : ""} onClick={() => setMode(id)}>
                   {nom}
@@ -375,12 +375,13 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
       />
       {dernierImport && dernierImport.parties.length > 0 && (
         <div className="apres-import">
-          {dernierImport.decision === null ? (
+          {dernierImport.decision === null && dernierImport.choix === null && (
             <>
               <p className="muet">
                 <strong>{pluriel("nouvelle partie", dernierImport.parties.length)}</strong> (
                 {dernierImport.parLimite.map((l) => `${l.limite === null ? "limite inconnue" : euros(l.limite)} : ${l.parties}`).join(" · ")}
-                ). De l'entraînement dedans ? Les parties marquées restent à l'écart de tes stats normales.
+                ). De l'entraînement dedans ? Les parties marquées comptent dans tes gains et tes stats, et la tuile « Entraînement vs
+                normal » les compare au reste.
               </p>
               <div className="pilules">
                 {dernierImport.parLimite.map((l) => (
@@ -388,11 +389,12 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
                     key={String(l.limite)}
                     variante={l.limite === LIMITE_ENTRAINEMENT_DEFAUT ? "lime" : "clair"}
                     classe={l.limite === LIMITE_ENTRAINEMENT_DEFAUT ? "" : "sur-sombre"}
-                    onClick={() => {
-                      const ids = dernierImport.parties.filter((p) => p.limite === l.limite).map((p) => p.id);
-                      marquer(ids, true);
-                      setDernierImport({ ...dernierImport, decision: { limite: l.limite, ids } });
-                    }}
+                    onClick={() =>
+                      setDernierImport({
+                        ...dernierImport,
+                        choix: { limite: l.limite, ids: dernierImport.parties.filter((p) => p.limite === l.limite).map((p) => p.id) },
+                      })
+                    }
                   >
                     Entraînement à {l.limite === null ? "limite inconnue" : euros(l.limite)} ({l.parties})
                   </Pilule>
@@ -401,11 +403,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
                   <Pilule
                     variante="clair"
                     classe="sur-sombre"
-                    onClick={() => {
-                      const ids = dernierImport.parties.map((p) => p.id);
-                      marquer(ids, true);
-                      setDernierImport({ ...dernierImport, decision: { limite: null, ids } });
-                    }}
+                    onClick={() => setDernierImport({ ...dernierImport, choix: { limite: null, ids: dernierImport.parties.map((p) => p.id) } })}
                   >
                     Tout l'import en entraînement
                   </Pilule>
@@ -415,17 +413,69 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
                 </Pilule>
               </div>
             </>
-          ) : (
+          )}
+          {dernierImport.decision === null && dernierImport.choix !== null && (
+            <>
+              <p className="muet">
+                <strong>{pluriel("partie", dernierImport.choix.ids.length)}</strong>
+                {dernierImport.choix.limite === null ? "" : ` à ${euros(dernierImport.choix.limite)}`} en entraînement. Combien de tables
+                jouais-tu en même temps ?
+              </p>
+              <div className="pilules">
+                {[1, 2, 3, 4, 5, 6, 8].map((n) => (
+                  <Pilule
+                    key={n}
+                    variante={n === 4 ? "lime" : "clair"}
+                    classe={n === 4 ? "" : "sur-sombre"}
+                    onClick={() => {
+                      marquer(dernierImport.choix.ids, true, n);
+                      setDernierImport({ ...dernierImport, decision: { ...dernierImport.choix, tables: n } });
+                    }}
+                  >
+                    {n === 1 ? "1 table" : `${n} tables`}
+                  </Pilule>
+                ))}
+                <label className="champ-tables">
+                  autre{" "}
+                  <input
+                    type="number"
+                    min="1"
+                    max="30"
+                    placeholder="n"
+                    onKeyDown={(e) => {
+                      const n = Number(e.currentTarget.value);
+                      if (e.key === "Enter" && n >= 1) {
+                        marquer(dernierImport.choix.ids, true, n);
+                        setDernierImport({ ...dernierImport, decision: { ...dernierImport.choix, tables: n } });
+                      }
+                    }}
+                  />
+                </label>
+                <Pilule
+                  variante="clair"
+                  classe="sur-sombre"
+                  onClick={() => {
+                    marquer(dernierImport.choix.ids, true, null);
+                    setDernierImport({ ...dernierImport, decision: { ...dernierImport.choix, tables: null } });
+                  }}
+                >
+                  Je ne sais plus
+                </Pilule>
+              </div>
+            </>
+          )}
+          {dernierImport.decision !== null && (
             <p className="muet">
               {pluriel("partie", dernierImport.decision.ids.length)}
               {dernierImport.decision.limite === null ? "" : ` à ${euros(dernierImport.decision.limite)}`} marquée
-              {dernierImport.decision.ids.length > 1 ? "s" : ""} entraînement.{" "}
+              {dernierImport.decision.ids.length > 1 ? "s" : ""} entraînement
+              {dernierImport.decision.tables ? `, ${dernierImport.decision.tables === 1 ? "1 table" : `${dernierImport.decision.tables} tables`} en même temps` : ""}.{" "}
               <button
                 className="lien"
                 type="button"
                 onClick={() => {
                   marquer(dernierImport.decision.ids, false);
-                  setDernierImport({ ...dernierImport, decision: null });
+                  setDernierImport({ ...dernierImport, choix: null, decision: null });
                 }}
               >
                 Annuler

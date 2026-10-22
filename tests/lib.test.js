@@ -306,10 +306,20 @@ test("entraînement : marquage, filtre, tables simultanées, comparaison", async
   assert.equal(e.filtrerMode(marquees, "tout").length, mains.length);
   // mains non concernées : mêmes objets (pas de copie inutile)
   assert.ok(marquees.some((m, i) => m === mains[i]));
+  // nombre de tables déclaré
+  const quatre = e.marquerParties(mains, deux, true, 4);
+  assert.deepEqual(e.tablesDeclarees(quatre), [4]);
+  assert.ok(quatre.filter((m) => deux.has(m.partieId)).every((m) => m.tables === 4));
+  const cmp4 = e.comparerEntrainement(quatre, charts, null, parties[0].limite, 4);
+  assert.equal(cmp4.entrainement.parties, 2);
+  assert.equal(cmp4.entrainement.tablesDeclarees, 4);
+  assert.equal(e.comparerEntrainement(quatre, charts, null, parties[0].limite, 2).entrainement.parties, 0);
+  assert.deepEqual(cmp4.tablesDeclarees, [4]);
   // démarquage
   const demarquees = e.marquerParties(marquees, deux, false);
   assert.equal(e.partiesDe(demarquees).filter((p) => p.entrainement).length, 0);
   assert.ok(!("entrainement" in demarquees.find((m) => deux.has(m.partieId))));
+  assert.ok(!("tables" in e.marquerParties(quatre, deux, false).find((m) => deux.has(m.partieId))));
   // sélection par limite et période
   const ids = e.idsParLimiteEtPeriode(mains, parties[0].limite, parties[0].date, parties[0].date);
   assert.ok(ids.has(parties[0].id));
