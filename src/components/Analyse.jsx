@@ -19,7 +19,7 @@ import { calculerStats, positionHero } from "../lib/analyse.js";
 import { parseFichier, empreinteFichier, resultatJoueur } from "../lib/historique-mains.js";
 import { lireZip, sansBom } from "../lib/zip.js";
 import { bilanParLimite, limitesPresentes } from "../lib/limites.js";
-import { heuresParJour, totalHeuresMois, formatHeures } from "../lib/heures.js";
+import { heuresParJour, totalHeuresMois, formatHeures, cleJour } from "../lib/heures.js";
 import {
   LIMITE_ENTRAINEMENT_DEFAUT,
   partiesDe,
@@ -31,6 +31,8 @@ import {
   limiteComparaisonParDefaut,
 } from "../lib/mode-entrainement.js";
 import { Comparaison } from "./Comparaison.jsx";
+import { BarresEv } from "./graphes/BarresEv.jsx";
+import { evParPeriode, piresPeriodes, granulariteConseillee } from "../lib/ev-temps.js";
 import { lireLocal, ecrireLocal } from "../lib/stockage.js";
 import { euros, pourcent, dateHeure, ordinal, pluriel, formatBbArrondi } from "../lib/format.js";
 
@@ -70,6 +72,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   const [mode, setMode] = useState("tout");
   const [dernierImport, setDernierImport] = useState(null);
   const [limiteComparaison, setLimiteComparaison] = useState(null);
+  const [granulariteEv, setGranulariteEv] = useState(null);
   const aDesEntrainements = useMemo(() => analyse.mains.some((m) => m.entrainement), [analyse.mains]);
   const modeActif = aDesEntrainements ? mode : "tout";
   const mainsScope = useMemo(
@@ -106,6 +109,15 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   const reelParPartie = calculEv.points && stats.parties.length > 0 ? calculEv.sommeReel / stats.parties.length : null;
 
   const heures = useMemo(() => heuresParJour(mainsScope, correctionsHeures), [mainsScope, correctionsHeures]);
+  // cEV dans le temps : EV par partie, jour ou semaine, pour voir quand on en a perdu beaucoup.
+  const evTemps = useMemo(() => {
+    if (!calculEvTotal.parMain) return { granularite: "partie", liste: [], pires: [] };
+    const parPartie = evParPeriode(mainsScope, calculEvTotal.parMain, "partie");
+    const nbJours = new Set(parPartie.map((g) => cleJour(g.date))).size;
+    const granularite = granulariteEv || granulariteConseillee(parPartie.length, nbJours);
+    const liste = granularite === "partie" ? parPartie : evParPeriode(mainsScope, calculEvTotal.parMain, granularite);
+    return { granularite, liste, pires: piresPeriodes(liste, 5) };
+  }, [mainsScope, calculEvTotal.parMain, granulariteEv]);
   const moisAffiche = useMemo(() => {
     if (moisCalendrier) return moisCalendrier;
     const dates = mainsScope.map((m) => m.date).filter(Boolean);
@@ -653,20 +665,6 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           </div>
         </Tuile>
 
-        {/* ---- Entraînement vs normal ---- */}
-        {aDesEntrainements && (
-          <Comparaison
-            mains={analyse.mains}
-            charts={charts}
-            parMain={calculEvTotal.parMain}
-            limite={limiteComparaison !== null ? limiteComparaison : limiteComparaisonParDefaut(analyse.mains)}
-            setLimite={setLimiteComparaison}
-            limites={limites}
-            marquer={marquer}
-            idsParLimiteEtPeriode={(l, d, f) => idsParLimiteEtPeriode(analyse.mains, l, d, f)}
-          />
-        )}
-
         {/* ---- Niveau 2 : tendances ---- */}
         <Tuile
           variante="blanc"
@@ -753,6 +751,70 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
               ⚠ {stats.parties.filter((p) => !p.resultatConnu).length} partie(s) sans ligne de résultat dans l'export (comptées comme
               buy-in perdu).
             </p>
+          )}
+        </Tuile>
+
+        {/* ---- cEV dans le temps ---- */}
+        <Tuile
+          variante="blanc"
+          span={12}
+          titre="cEV dans le temps"
+          sous={`jetons attendus, chance neutralisée — ${libelleScope}`}
+          action={
+            calculEvTotal.parMain && (
+              <div className="segment">
+                {[
+                  ["partie", "Partie"],
+                  ["jour", "Jour"],
+                  ["semaine", "Semaine"],
+                ].map(([id, nom]) => (
+                  <button key={id} className={evTemps.granularite === id ? "actif" : ""} onClick={() => setGranulariteEv(id)} type="button">
+                    {nom}
+                  </button>
+                ))}
+              </div>
+            )
+          }
+        >
+          {!calculEvTotal.parMain ? (
+            <Chargement avancement={calculEvTotal.avancement} texte="Calcul de l'équité des tapis" />
+          ) : evTemps.liste.length < 2 ? (
+            <p className="muet">Pas assez de parties sur la sélection.</p>
+          ) : (
+            <>
+              <BarresEv
+                valeurs={evTemps.liste.map((g) => ({ cle: g.cle, ev: g.ev, libelle: g.libelle, etiquette: evTemps.granularite === "partie" ? g.libelle.slice(0, 5) : g.libelle }))}
+                formatY={(v) => Math.round(v).toLocaleString("fr-FR")}
+                infobulle={(i) => {
+                  const g = evTemps.liste[i];
+                  return (
+                    <>
+                      <strong>{g.libelle}</strong>
+                      {evTemps.granularite !== "partie" && ` · ${pluriel("partie", g.parties)}`}
+                      <br />
+                      cEV : <strong>{signe(g.ev)}{Math.round(g.ev).toLocaleString("fr-FR")}</strong> jetons · réel {signe(g.reel)}
+                      {Math.round(g.reel).toLocaleString("fr-FR")}
+                      {g.limite !== null && evTemps.granularite === "partie" && ` · ${euros(g.limite)}`}
+                    </>
+                  );
+                }}
+              />
+              {evTemps.pires.length > 0 && (
+                <div className="pires-ev">
+                  <span className="muet">Plus grosses pertes de cEV :</span>
+                  {evTemps.pires.map((g) => (
+                    <span key={g.cle} className="pilule pilule--clair pire-ev" title={evTemps.granularite === "partie" ? `partie ${g.cle}` : pluriel("partie", g.parties)}>
+                      {g.libelle} <strong>{Math.round(g.ev).toLocaleString("fr-FR")}</strong>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <p className="tuile-legende">
+                Une barre sous zéro, c'est {{ partie: "une partie", jour: "un jour", semaine: "une semaine" }[evTemps.granularite]} où tes mises à tapis
+                valaient moins que ce qu'elles coûtaient, chance mise à part. Survole pour le détail
+                {evTemps.granularite === "partie" ? "" : " ; passe en « Partie » pour isoler les parties en cause"}.
+              </p>
+            </>
           )}
         </Tuile>
 
@@ -884,6 +946,21 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
             ]}
           />
         </Tuile>
+
+        {/* ---- Entraînement vs normal ---- */}
+        {aDesEntrainements && (
+          <Comparaison
+            mains={analyse.mains}
+            charts={charts}
+            parMain={calculEvTotal.parMain}
+            limite={limiteComparaison !== null ? limiteComparaison : limiteComparaisonParDefaut(analyse.mains)}
+            setLimite={setLimiteComparaison}
+            limites={limites}
+            marquer={marquer}
+            idsParLimiteEtPeriode={(l, d, f) => idsParLimiteEtPeriode(analyse.mains, l, d, f)}
+          />
+        )}
+
       </Bento>
 
       <div className="panneau">

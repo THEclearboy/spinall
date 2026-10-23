@@ -26,6 +26,14 @@ npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 ```
 
 
+## cEV dans le temps
+
+Tuile « cEV dans le temps » (`src/components/graphes/BarresEv.jsx`,
+`src/lib/ev-temps.js`) : l'EV en jetons regroupée par partie, jour ou semaine
+(granularité conseillée selon le volume), barres lime / orange, ligne du zéro,
+infobulle, et les cinq plus grosses pertes en pastilles. Sert à repérer quand
+le cEV a plongé.
+
 ## Mode entraînement
 
 Pour s'entraîner à jouer plus de tables sans fausser ses stats (souvent à 0,20 €) :

@@ -2785,6 +2785,28 @@ body.hud-fenetre .hud {
   user-select: none;
 }
 
+/* ------------------------------------------------- cEV dans le temps */
+.barre-ev.positif {
+  fill: var(--lime-2);
+}
+.barre-ev.negatif {
+  fill: var(--orange);
+}
+.barre-ev.active {
+  fill: var(--texte-sombre);
+}
+.pires-ev {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+.pire-ev strong {
+  color: var(--orange);
+  margin-left: 4px;
+}
+
 /* ------------------------------------------------- mode entraînement */
 .apres-import {
   margin-top: 12px;

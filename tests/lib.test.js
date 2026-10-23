@@ -351,3 +351,36 @@ test("entraînement : marquage, filtre, tables simultanées, comparaison", async
   assert.equal(e.limiteComparaisonParDefaut(marquees), parties[0].limite);
   assert.equal(e.limiteComparaisonParDefaut(mains), null);
 });
+
+test("cEV dans le temps : regroupement par partie, jour, semaine et pires périodes", async () => {
+  const t = await import("../src/lib/ev-temps.js");
+  const lundi = new Date(2026, 9, 19, 21, 0).getTime(); // lundi 19 octobre 2026
+  const mains = [
+    { id: "a1", partieId: "A", date: lundi, buyIn: 0.2 },
+    { id: "a2", partieId: "A", date: lundi + 60_000, buyIn: 0.2 },
+    { id: "b1", partieId: "B", date: lundi + 3_600_000, buyIn: 1 },
+    { id: "c1", partieId: "C", date: lundi + 2 * 86_400_000, buyIn: 1 }, // mercredi
+    { id: "d1", partieId: "D", date: lundi + 8 * 86_400_000, buyIn: 1 }, // lundi suivant
+    { id: "e1", partieId: "E", date: lundi + 9 * 86_400_000, buyIn: 1 }, // sans EV calculée
+  ];
+  const parMain = new Map([
+    ["a1", { reel: -100, ev: -40 }],
+    ["a2", { reel: 50, ev: 10 }],
+    ["b1", { reel: 200, ev: -120 }],
+    ["c1", { reel: -300, ev: 80 }],
+    ["d1", { reel: 0, ev: -5 }],
+  ]);
+  const parPartie = t.evParPeriode(mains, parMain, "partie");
+  assert.deepEqual(parPartie.map((g) => [g.cle, g.ev, g.parties, g.mains]), [["A", -30, 1, 2], ["B", -120, 1, 1], ["C", 80, 1, 1], ["D", -5, 1, 1]]);
+  assert.equal(parPartie[0].limite, 0.2);
+  const parJour = t.evParPeriode(mains, parMain, "jour");
+  assert.deepEqual(parJour.map((g) => [g.ev, g.parties]), [[-150, 2], [80, 1], [-5, 1]]);
+  const parSemaine = t.evParPeriode(mains, parMain, "semaine");
+  assert.deepEqual(parSemaine.map((g) => [g.ev, g.parties]), [[-70, 3], [-5, 1]]);
+  assert.equal(t.debutSemaine(lundi + 2 * 86_400_000), new Date(2026, 9, 19).getTime());
+  assert.deepEqual(t.piresPeriodes(parPartie, 2).map((g) => g.cle), ["B", "A"]);
+  assert.equal(t.evParPeriode(mains, null).length, 0);
+  assert.equal(t.granulariteConseillee(100, 10), "partie");
+  assert.equal(t.granulariteConseillee(1000, 10), "jour");
+  assert.equal(t.granulariteConseillee(1000, 400), "semaine");
+});
