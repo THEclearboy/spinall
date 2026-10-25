@@ -26,6 +26,34 @@ npm run build    # produit dist/index.html : UN seul fichier, tout intégré
 ```
 
 
+## Simulateur multi-tables
+
+L'onglet **Simulateur** fait jouer 2 à 4 tables de Spin & Rush en même temps contre des adversaires automatiques,
+avec l'habillage et les contraintes du client Betclic : tapis de 500 jetons, blinds 10/20, structure des niveaux
+selon le multiplicateur (×2 : 1 min, ×3 : 1 min 30, ×4 et plus : 2 min), compte à rebours pour agir (10 s par défaut,
+réglable de 7 à 15 s) avec parole / abandon automatique quand le temps est écoulé, pré-action « Parole / Se coucher »,
+curseur et boutons rapides de relance (Min, 2,5 bb, 3 bb, ½ pot, ¾ pot, Pot, Tapis), raccourcis clavier
+(`F` se coucher ou parole, `C` suivre, `R` relancer, `A` tapis, `1`–`4` choisir la table). La table où c'est à toi
+de parler est surlignée et sonne ; elle clignote en rouge dans les trois dernières secondes.
+
+Le **coach** regarde chaque décision :
+
+- **Pré-flop** : dès qu'un spot est couvert par un de tes tableaux (SB premier de parole en heads-up, BB face à un limp
+  en heads-up, bouton premier de parole à 3 joueurs), ta décision est comparée à l'action attendue ; un bandeau rouge
+  « Erreur de range » apparaît sur la table (et un son), avec la main, la profondeur, l'action jouée et l'action attendue.
+  Un bouton « Voir la range » affiche le tableau concerné avec la main surlignée.
+- **C-bet** : si tu étais le dernier relanceur pré-flop et que tu checkes au flop alors que personne n'a misé, le coach
+  signale « C-bet manqué » (un c-bet joué est compté aussi).
+- Les décisions non couvertes par un tableau (par exemple SB ou BB à 3 joueurs) ne sont pas jugées.
+
+Les adversaires suivent tes propres tableaux dans les spots couverts (avec un peu de bruit), poussent ou se couchent
+selon la force de leur main et la profondeur ailleurs, et jouent le post-flop sur la force de leur main faite et leurs
+tirages. Quand tu es éliminé ou que tu gagnes, une nouvelle table démarre cinq secondes plus tard. Les gains sont fictifs.
+
+Les compteurs de la session (parties, mains, conformité pré-flop, erreurs, c-bets joués / manqués, temps écoulés, net)
+s'affichent au-dessus des tables ; le cumul de toutes les sessions est conservé dans le navigateur (`expresso.simulateur.cumul`).
+Changer d'onglet met la partie en pause.
+
 ## cEV dans le temps
 
 Tuile « cEV dans le temps » (`src/components/graphes/BarresEv.jsx`,
@@ -153,8 +181,14 @@ src/
     statistiques.js        agrégats de l'entraînement
     format.js              nombres, dates, pluriels (fr-FR)
     sons.js                bips de feedback (Web Audio)
+    simulateur/
+      moteur.js            règles d'une table de Spin & Rush (blinds, tours de parole, pots annexes, abattage, niveaux)
+      bot.js               adversaires automatiques (tableaux + formule de Chen pré-flop, force de main post-flop)
+      coach.js             spots couverts, verdict pré-flop, détection des c-bets manqués
+      partie.js            session multi-tables : horloges, temps d'action, enchaînement des mains, compteurs
+      ui.js                textes et montants de relance proposés
   components/
-    Entrainement.jsx  Statistiques.jsx  Analyse.jsx  Situation.jsx  Ranges.jsx  Reglages.jsx
+    Entrainement.jsx  Simulateur.jsx + TableSim.jsx (sim.css, habillage Betclic)  Statistiques.jsx  Analyse.jsx  Situation.jsx  Ranges.jsx  Reglages.jsx
     Table.jsx (table générique)  TableScene.jsx  Carte.jsx  ChoixCarte.jsx  Grille.jsx
     DetailMain.jsx  CartesKpi.jsx + RapportImpression.jsx (version papier)  BilanLimites.jsx
     ui/Tuile.jsx           tuile, pilule et grille bento
@@ -173,6 +207,7 @@ tests/                     node --test, avec un historique synthétique dans fix
 | `localStorage` `expresso.reglages` | réglages |
 | `localStorage` `expresso.heures` | heures jouées saisies à la main (par jour) |
 | `localStorage` `expresso.situation` | dernière situation mise en scène |
+| `localStorage` `expresso.simulateur.options` / `expresso.simulateur.cumul` | réglages du simulateur et cumul de ses sessions |
 | IndexedDB `expresso-trainer` / `donnees` / `analyse` | mains importées et fichiers déjà importés |
 
 ## Mettre à jour un tableau depuis une capture d'écran

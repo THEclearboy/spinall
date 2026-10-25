@@ -9,6 +9,7 @@ import { Ranges } from "./components/Ranges.jsx";
 import { Reglages } from "./components/Reglages.jsx";
 import { Situation } from "./components/Situation.jsx";
 import { SessionHud } from "./components/SessionHud.jsx";
+import { Simulateur } from "./components/Simulateur.jsx";
 import { nouvelleSession } from "./lib/session.js";
 
 function reglagesParDefaut() {
@@ -22,6 +23,7 @@ function reglagesParDefaut() {
 
 const ONGLETS = [
   { id: "entrainement", nom: "Entraînement" },
+  { id: "simulateur", nom: "Simulateur" },
   { id: "stats", nom: "Statistiques" },
   { id: "analyse", nom: "Analyse" },
   { id: "hud", nom: "HUD" },
@@ -142,6 +144,8 @@ export default function App() {
             setHistorique={setHistorique}
           />
         )}
+        {/* Toujours monté : une partie en cours se met en pause quand on change d'onglet, sans être perdue. */}
+        <Simulateur charts={charts} reglages={reglages} actif={onglet === "simulateur"} />
         {onglet === "stats" && <Statistiques charts={charts} historique={historique} />}
         {onglet === "analyse" && (
           <Analyse

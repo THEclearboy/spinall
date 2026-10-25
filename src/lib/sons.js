@@ -35,3 +35,11 @@ export function sonMauvaiseReponse(actif) {
     bip(180, 0, 0.22, "square", 0.08);
   } catch {}
 }
+
+/** Petit signal quand c'est au joueur de parler (simulateur). */
+export function sonTonTour(actif) {
+  if (!actif) return;
+  try {
+    bip(520, 0, 0.07, "sine", 0.1);
+  } catch {}
+}
