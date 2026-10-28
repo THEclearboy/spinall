@@ -32,7 +32,8 @@ L'onglet **Simulateur** fait jouer 2 à 4 tables de Spin & Rush en même temps c
 avec l'habillage et les contraintes du client Betclic : tapis de 500 jetons, blinds 10/20, structure des niveaux
 selon le multiplicateur (×2 : 1 min, ×3 : 1 min 30, ×4 et plus : 2 min), compte à rebours pour agir (10 s par défaut,
 réglable de 7 à 15 s) avec parole / abandon automatique quand le temps est écoulé, pré-action « Parole / Se coucher »,
-curseur et boutons rapides de relance (Min, 2,5 bb, 3 bb, ½ pot, ¾ pot, Pot, Tapis), raccourcis clavier
+curseur et boutons rapides de relance (Min, 2,5 bb, 3 bb, ½ pot, ¾ pot, Pot, Tapis), montants affichés en big blinds
+(stacks, mises, pot, boutons ; option « Jetons » pour revenir aux jetons), raccourcis clavier
 (`F` se coucher ou parole, `C` suivre, `R` relancer, `A` tapis, `1`–`4` choisir la table). La table où c'est à toi
 de parler est surlignée et sonne ; elle clignote en rouge dans les trois dernières secondes.
 

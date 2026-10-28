@@ -3,6 +3,12 @@ import { SYMBOLES } from "../lib/cartes.js";
 import { actionsLegales, niveauCourant } from "../lib/simulateur/moteur.js";
 import { texteAction, derniereAction, relanceParDefaut, presetsRelance, texteResultat, nomCategorie, mmss } from "../lib/simulateur/ui.js";
 import { euros, formatNombre } from "../lib/format.js";
+
+/** Formateur de montants : en big blinds (« 24,5 bb ») ou en jetons. */
+export function formateurMontant(affichage, bb) {
+  if (affichage !== "jetons" && bb > 0) return (jetons) => `${(jetons / bb).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} bb`;
+  return (jetons) => formatNombre(jetons);
+}
 import { useLargeur } from "./graphes/useLargeur.js";
 
 export const LARGEUR_FENETRE = 640;
@@ -50,7 +56,7 @@ function disposition(table) {
   return places;
 }
 
-function Pod({ joueur, position, main, table, hero, parle, progression, revelee, maintenant }) {
+function Pod({ joueur, position, main, table, hero, parle, progression, revelee, montant, enBb }) {
   const couche = main && main.couches.has(joueur.id);
   const cartes = main ? main.cartes[joueur.id] : null;
   const action = main ? derniereAction(main, joueur.id) : null;
@@ -94,13 +100,15 @@ function Pod({ joueur, position, main, table, hero, parle, progression, revelee,
         <div className="sim-identite">
           <div className="sim-nom">{joueur.nom}</div>
           <div className="sim-stack">
-            {joueur.elimine ? `Éliminé (${joueur.place}ᵉ)` : couche ? "Couché" : formatNombre(joueur.stack)}
-            {!joueur.elimine && !couche && main && <span className="sim-bb"> · {(joueur.stack / main.bb).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} bb</span>}
+            {joueur.elimine ? `Éliminé (${joueur.place}ᵉ)` : couche ? "Couché" : montant(joueur.stack)}
+            {!joueur.elimine && !couche && main && (
+              <span className="sim-bb"> · {enBb ? formatNombre(joueur.stack) : `${(joueur.stack / main.bb).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} bb`}</span>
+            )}
           </div>
         </div>
       </div>
       {montreAction && !finie && <div className={`sim-action-pod verbe-${action.verbe}${action.allin ? " allin" : ""}`}>{texteAction(action)}</div>}
-      {gain > 0 && <div className="sim-gain">+{formatNombre(gain)}{force ? ` · ${force}` : ""}</div>}
+      {gain > 0 && <div className="sim-gain">+{montant(gain)}{force ? ` · ${force}` : ""}</div>}
       {finie && !gain && force && <div className="sim-force">{force}</div>}
     </div>
   );
@@ -110,13 +118,15 @@ function Pod({ joueur, position, main, table, hero, parle, progression, revelee,
  * Une table du simulateur, dessinée à taille fixe (640 × 430) puis mise à l'échelle de sa colonne.
  * t : emplacement de la Simulation ({ table, … }), maintenant : horloge de la simulation.
  */
-export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preaction, setPreaction }) {
+export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preaction, setPreaction, affichage = "bb" }) {
   const [ref, largeur] = useLargeur();
   const echelle = largeur ? Math.min(1, largeur / LARGEUR_FENETRE) : 1;
   const table = t.table;
   const main = table.main;
   const legal = main && main.rue !== "fin" && main.aParler === "hero" ? actionsLegales(table) : null;
   const niveau = niveauCourant(table, maintenant);
+  const enBb = affichage !== "jetons";
+  const montant = formateurMontant(affichage, main ? main.bb : niveau.bb);
   const places = useMemo(() => disposition(table), [table, table.joueurs.map((j) => j.elimine).join()]);
   const restant = sim.tempsRestant(t, maintenant);
   const progression = legal ? restant / sim.options.secondesAction : null;
@@ -174,8 +184,8 @@ export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preact
           {main && (
             <div className="sim-centre">
               <div className="sim-pot">
-                Pot <strong>{formatNombre(potCentral)}</strong>
-                {potCentral !== main.pot && <em>total {formatNombre(main.pot)}</em>}
+                Pot <strong>{montant(potCentral)}</strong>
+                {potCentral !== main.pot && <em>total {montant(main.pot)}</em>}
               </div>
               {main.board.length > 0 && (
                 <div className="sim-board">
@@ -194,7 +204,7 @@ export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preact
               return (
                 <div key={id} className="sim-mise" style={{ left: MISES[pos].left, top: MISES[pos].top }}>
                   <span className="sim-jeton" />
-                  {formatNombre(mise)}
+                  {montant(mise)}
                 </div>
               );
             })}
@@ -218,13 +228,14 @@ export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preact
                 parle={!!main && main.rue !== "fin" && main.aParler === j.id}
                 progression={j.hero ? progression : null}
                 revelee={!!main && !!main.revelees[j.id]}
-                maintenant={maintenant}
+                montant={montant}
+                enBb={enBb}
               />
             );
           })}
 
           {main && main.rue === "fin" && !t.finie && (
-            <div className="sim-resultat">{texteResultat(table, main, nomDe)}</div>
+            <div className="sim-resultat">{texteResultat(table, main, nomDe, montant)}</div>
           )}
 
           {t.finie && (
@@ -286,7 +297,7 @@ export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preact
                 {!legal.peutCheck && (
                   <button type="button" className="sim-bouton call" onClick={() => agir(table.id, { verbe: "call" })}>
                     {legal.callAllin ? "Tapis" : "Suivre"}
-                    <span>{formatNombre(legal.montantCall)}</span>
+                    <span>{montant(legal.montantCall)}</span>
                     <small>C</small>
                   </button>
                 )}
@@ -303,7 +314,7 @@ export function TableSim({ t, sim, maintenant, agir, focalisee, surFocus, preact
                     onClick={() => agir(table.id, relance >= legal.relanceMax ? { verbe: "allin" } : { verbe: "raise", montant: relance })}
                   >
                     {relance >= legal.relanceMax ? "Tapis" : legal.miseCourante > 0 && !legal.peutCheck ? "Relancer" : "Miser"}
-                    <span>{formatNombre(relance)}</span>
+                    <span>{montant(relance)}</span>
                     <small>R</small>
                   </button>
                 )}

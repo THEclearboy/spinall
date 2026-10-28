@@ -65,19 +65,27 @@ export function presetsRelance(main, legal) {
   return liste;
 }
 
-/** Texte de fin de main : « BiGTony remporte 300 avec une paire ». */
-export function texteResultat(table, main, nomDe) {
+/** Texte de fin de main : « BiGTony remporte 15 bb avec une paire ». `montant` formate les jetons. */
+export function texteResultat(table, main, nomDe, montant = formatNombre) {
   const r = main.resultat;
   if (!r) return "";
-  const parts = [];
+  // les pots gagnés par les mêmes joueurs sont additionnés (pot principal + pots annexes)
+  const groupes = [];
   for (const pot of r.pots) {
     if (pot.rendu) continue;
-    const noms = pot.gagnants.map(nomDe);
-    let texte = `${noms.join(" et ")} remporte${noms.length > 1 ? "nt" : ""} ${formatNombre(pot.montant)}`;
-    if (r.abattage && pot.gagnants.length) texte += ` avec ${nomCategorie(r.forces[pot.gagnants[0]])}`;
-    parts.push(texte);
+    const cle = [...pot.gagnants].sort().join("+");
+    const g = groupes.find((x) => x.cle === cle);
+    if (g) g.montant += pot.montant;
+    else groupes.push({ cle, gagnants: pot.gagnants, montant: pot.montant });
   }
-  return parts.join(" · ");
+  return groupes
+    .map((g) => {
+      const noms = g.gagnants.map(nomDe);
+      let texte = `${noms.join(" et ")} remporte${noms.length > 1 ? "nt" : ""} ${montant(g.montant)}`;
+      if (r.abattage && g.gagnants.length) texte += ` avec ${nomCategorie(r.forces[g.gagnants[0]])}`;
+      return texte;
+    })
+    .join(" · ");
 }
 
 export const mmss = (ms) => {

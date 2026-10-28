@@ -162,3 +162,10 @@ test("structure Betclic : durée des niveaux selon le multiplicateur", () => {
   const fixe = new Simulation({ nbTables: 1, buyIn: 0.2, charts, dureeNiveauSec: 180, alea: graine(5), maintenant: 0 });
   assert.equal(fixe.tables[0].table.dureeNiveauMs, 180_000);
 });
+
+test("texte de résultat : pots du même gagnant additionnés, montants en bb", async () => {
+  const { texteResultat } = await import("../src/lib/simulateur/ui.js");
+  const main = { resultat: { pots: [{ montant: 30, gagnants: ["b1"], rendu: false }, { montant: 240, gagnants: ["b1"], rendu: false }, { montant: 100, gagnants: ["hero"], rendu: true }], abattage: false, forces: {} } };
+  const nomDe = (id) => ({ b1: "Kraken", hero: "Toi" })[id];
+  assert.equal(texteResultat({}, main, nomDe, (j) => `${j / 20} bb`), "Kraken remporte 13.5 bb");
+});

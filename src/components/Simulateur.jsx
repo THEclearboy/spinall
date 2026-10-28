@@ -10,7 +10,7 @@ import { euros, pourcent, pluriel } from "../lib/format.js";
 import { sonTonTour, sonMauvaiseReponse } from "../lib/sons.js";
 import "../sim.css";
 
-const OPTIONS_DEFAUT = { nbTables: 3, buyIn: 0.2, secondesAction: 10, dureeNiveauSec: "auto", nomHero: "Toi" };
+const OPTIONS_DEFAUT = { nbTables: 3, buyIn: 0.2, secondesAction: 10, dureeNiveauSec: "auto", nomHero: "Toi", affichage: "bb" };
 const CUMUL_VIDE = { sessions: 0, parties: 0, partiesGagnees: 0, spots: 0, erreurs: 0, cbetOk: 0, cbetManques: 0, tempsEcoules: 0, investi: 0, gagne: 0 };
 const TYPES = {
   erreur: "Erreur de range",
@@ -235,6 +235,19 @@ export function Simulateur({ charts, reglages, actif = true }) {
                 </div>
               </div>
               <div className="sim-option">
+                <span className="sim-option-nom">Montants</span>
+                <div className="segment">
+                  {[
+                    ["bb", "Big blinds"],
+                    ["jetons", "Jetons"],
+                  ].map(([v, nom]) => (
+                    <button key={v} type="button" className={options.affichage === v ? "actif" : ""} onClick={() => setOptions({ ...options, affichage: v })}>
+                      {nom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="sim-option">
                 <span className="sim-option-nom">Ton pseudo</span>
                 <input className="sim-pseudo" value={options.nomHero} maxLength={14} onChange={(e) => setOptions({ ...options, nomHero: e.target.value || "Toi" })} />
               </div>
@@ -278,6 +291,14 @@ export function Simulateur({ charts, reglages, actif = true }) {
               <Compteur nom="net (fictif)" valeur={`${signe(net)}${euros(net)}`} classe={net > 0 ? "positif" : net < 0 ? "negatif" : ""} />
             </div>
             <div className="sim-commandes">
+              <div className="segment" title="Affichage des montants">
+                <button type="button" className={options.affichage !== "jetons" ? "actif" : ""} onClick={() => setOptions({ ...options, affichage: "bb" })}>
+                  bb
+                </button>
+                <button type="button" className={options.affichage === "jetons" ? "actif" : ""} onClick={() => setOptions({ ...options, affichage: "jetons" })}>
+                  Jetons
+                </button>
+              </div>
               {etat === "jeu" ? (
                 <button type="button" className="bouton" onClick={mettreEnPause}>
                   Pause
@@ -305,6 +326,7 @@ export function Simulateur({ charts, reglages, actif = true }) {
                 surFocus={setFocus}
                 preaction={preactions[t.table.id] || null}
                 setPreaction={(v) => setPreactions((p) => ({ ...p, [t.table.id]: v }))}
+                affichage={options.affichage}
               />
             ))}
             {etat === "pause" && (
