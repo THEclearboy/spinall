@@ -51,6 +51,10 @@ Les adversaires suivent tes propres tableaux dans les spots couverts (avec un pe
 selon la force de leur main et la profondeur ailleurs, et jouent le post-flop sur la force de leur main faite et leurs
 tirages. Quand tu es éliminé ou que tu gagnes, une nouvelle table démarre cinq secondes plus tard. Les gains sont fictifs.
 
+Deux dispositions : **une table en grand** (défaut) avec les autres tables en vignettes sur le côté, la table où c'est à
+toi de parler passant d'elle-même au premier plan (« Bascule auto », débrayable ; touches `1`–`4` pour afficher une
+table), ou **mosaïque** avec toutes les tables côte à côte.
+
 Les compteurs de la session (parties, mains, conformité pré-flop, erreurs, c-bets joués / manqués, temps écoulés, net)
 s'affichent au-dessus des tables ; le cumul de toutes les sessions est conservé dans le navigateur (`expresso.simulateur.cumul`).
 Changer d'onglet met la partie en pause.

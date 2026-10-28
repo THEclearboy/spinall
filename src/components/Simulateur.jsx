@@ -10,7 +10,18 @@ import { euros, pourcent, pluriel } from "../lib/format.js";
 import { sonTonTour, sonMauvaiseReponse } from "../lib/sons.js";
 import "../sim.css";
 
-const OPTIONS_DEFAUT = { nbTables: 3, buyIn: 0.2, secondesAction: 10, dureeNiveauSec: "auto", nomHero: "Toi", affichage: "bb" };
+const OPTIONS_DEFAUT = { nbTables: 3, buyIn: 0.2, secondesAction: 10, dureeNiveauSec: "auto", nomHero: "Toi", affichage: "bb", disposition: "une", basculeAuto: true };
+
+const heroAgit = (t) => !!t.table.main && t.table.main.rue !== "fin" && t.table.main.aParler === "hero";
+
+/** Table à mettre en avant : celle affichée si c'est à nous, sinon la plus urgente, sinon celle affichée. */
+function tableAMontrer(sim, affichee, maintenant) {
+  const actuelle = sim.tables.find((t) => t.table.id === affichee);
+  if (actuelle && heroAgit(actuelle)) return affichee;
+  const urgente = tableFocalisee(sim, null, maintenant);
+  if (urgente) return urgente.table.id;
+  return actuelle ? affichee : sim.tables[0].table.id;
+}
 const CUMUL_VIDE = { sessions: 0, parties: 0, partiesGagnees: 0, spots: 0, erreurs: 0, cbetOk: 0, cbetManques: 0, tempsEcoules: 0, investi: 0, gagne: 0 };
 const TYPES = {
   erreur: "Erreur de range",
@@ -51,6 +62,7 @@ export function Simulateur({ charts, reglages, actif = true }) {
   const [rangeVisible, setRangeVisible] = useState(null);
   const [preactions, setPreactions] = useState({});
   const [filtre, setFiltre] = useState("tout");
+  const [hauteurDispo, setHauteurDispo] = useState(() => (typeof window === "undefined" ? 700 : window.innerHeight - 230));
   const simRef = useRef(null);
   const decalage = useRef(0);
   const pauseDepuis = useRef(null);
@@ -63,6 +75,12 @@ export function Simulateur({ charts, reglages, actif = true }) {
   useEffect(() => {
     ecrireLocal("simulateur.cumul", cumul);
   }, [cumul]);
+
+  useEffect(() => {
+    const maj = () => setHauteurDispo(window.innerHeight - 230);
+    window.addEventListener("resize", maj);
+    return () => window.removeEventListener("resize", maj);
+  }, []);
 
   const sons = useCallback(() => {
     const sim = simRef.current;
@@ -85,7 +103,7 @@ export function Simulateur({ charts, reglages, actif = true }) {
     messagesSonores.current = 0;
     simRef.current = new Simulation({ ...options, charts, maintenant: Date.now() });
     setPreactions({});
-    setFocus(null);
+    setFocus(simRef.current.tables[0].table.id);
     setRangeVisible(null);
     setEtat("jeu");
   };
@@ -129,22 +147,26 @@ export function Simulateur({ charts, reglages, actif = true }) {
     const id = setInterval(() => {
       const sim = simRef.current;
       if (!sim) return;
-      sim.tick(horloge());
+      const maintenant = horloge();
+      sim.tick(maintenant);
       sons();
+      if (options.disposition === "une" && options.basculeAuto) setFocus((f) => tableAMontrer(sim, f, maintenant));
       setRendu((n) => n + 1);
     }, 100);
     return () => clearInterval(id);
-  }, [etat, horloge, sons]);
+  }, [etat, horloge, sons, options.disposition, options.basculeAuto]);
 
   const agir = useCallback(
     (tableId, action) => {
       const sim = simRef.current;
       if (!sim || etat !== "jeu") return;
-      sim.agirHero(tableId, action, horloge());
+      const maintenant = horloge();
+      sim.agirHero(tableId, action, maintenant);
       sons();
+      if (options.disposition === "une" && options.basculeAuto) setFocus((f) => tableAMontrer(sim, f, maintenant));
       setRendu((n) => n + 1);
     },
-    [etat, horloge, sons],
+    [etat, horloge, sons, options.disposition, options.basculeAuto],
   );
 
   useEffect(() => {
@@ -161,6 +183,10 @@ export function Simulateur({ charts, reglages, actif = true }) {
       }
       const t = tableFocalisee(sim, focus, horloge());
       if (!t) return;
+      if (options.disposition === "une" && t.table.id !== focus) {
+        setFocus(t.table.id); // on montre d'abord la table concernée, la touche suivante agira
+        return;
+      }
       const legal = actionsLegales(t.table);
       if (!legal || legal.joueur !== "hero") return;
       if (k === "f") agir(t.table.id, { verbe: legal.peutCheck ? "check" : "fold" });
@@ -172,7 +198,7 @@ export function Simulateur({ charts, reglages, actif = true }) {
     };
     window.addEventListener("keydown", surTouche);
     return () => window.removeEventListener("keydown", surTouche);
-  }, [etat, focus, agir, horloge]);
+  }, [etat, focus, agir, horloge, options.disposition]);
 
   const sim = simRef.current;
   const maintenant = etat === "pause" && pauseDepuis.current !== null ? pauseDepuis.current - decalage.current : horloge();
@@ -235,6 +261,19 @@ export function Simulateur({ charts, reglages, actif = true }) {
                 </div>
               </div>
               <div className="sim-option">
+                <span className="sim-option-nom">Disposition</span>
+                <div className="segment">
+                  {[
+                    ["une", "Une table en grand"],
+                    ["mosaique", "Mosaïque"],
+                  ].map(([v, nom]) => (
+                    <button key={v} type="button" className={options.disposition === v ? "actif" : ""} onClick={() => setOptions({ ...options, disposition: v })}>
+                      {nom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="sim-option">
                 <span className="sim-option-nom">Montants</span>
                 <div className="segment">
                   {[
@@ -258,8 +297,8 @@ export function Simulateur({ charts, reglages, actif = true }) {
               </button>
               <p className="sim-aide">
                 Tapis de 500 jetons, blinds 10/20, structure Betclic (×2 : niveaux d'1 min, ×3 : 1 min 30, ×4 et plus : 2 min). Clavier : <kbd>F</kbd> se coucher / parole,{" "}
-                <kbd>C</kbd> suivre, <kbd>R</kbd> relancer (montant proposé), <kbd>A</kbd> tapis, <kbd>1</kbd>–<kbd>4</kbd> choisir la table. Sans action à temps : parole ou abandon
-                automatique.
+                <kbd>C</kbd> suivre, <kbd>R</kbd> relancer (montant proposé), <kbd>A</kbd> tapis, <kbd>1</kbd>–<kbd>4</kbd> afficher une table. En disposition « une table », la table
+                où c'est à toi de parler passe d'elle-même au premier plan. Sans action à temps : parole ou abandon automatique.
               </p>
             </div>
           </Tuile>
@@ -291,6 +330,20 @@ export function Simulateur({ charts, reglages, actif = true }) {
               <Compteur nom="net (fictif)" valeur={`${signe(net)}${euros(net)}`} classe={net > 0 ? "positif" : net < 0 ? "negatif" : ""} />
             </div>
             <div className="sim-commandes">
+              <div className="segment" title="Disposition des tables">
+                <button type="button" className={options.disposition === "une" ? "actif" : ""} onClick={() => setOptions({ ...options, disposition: "une" })}>
+                  Une table
+                </button>
+                <button type="button" className={options.disposition === "mosaique" ? "actif" : ""} onClick={() => setOptions({ ...options, disposition: "mosaique" })}>
+                  Mosaïque
+                </button>
+              </div>
+              {options.disposition === "une" && (
+                <label className="sim-bascule" title="Afficher automatiquement la table où c'est à toi de parler">
+                  <input type="checkbox" checked={options.basculeAuto} onChange={(e) => setOptions({ ...options, basculeAuto: e.target.checked })} />
+                  Bascule auto
+                </label>
+              )}
               <div className="segment" title="Affichage des montants">
                 <button type="button" className={options.affichage !== "jetons" ? "actif" : ""} onClick={() => setOptions({ ...options, affichage: "bb" })}>
                   bb
@@ -314,30 +367,82 @@ export function Simulateur({ charts, reglages, actif = true }) {
             </div>
           </div>
 
-          <div className={`sim-tables n${sim.tables.length}${etat === "pause" ? " en-pause" : ""}`}>
-            {sim.tables.map((t) => (
-              <TableSim
-                key={`${t.table.id}-${t.table.debut}`}
-                t={t}
-                sim={sim}
-                maintenant={maintenant}
-                agir={agir}
-                focalisee={focalisee ? focalisee.table.id === t.table.id : false}
-                surFocus={setFocus}
-                preaction={preactions[t.table.id] || null}
-                setPreaction={(v) => setPreactions((p) => ({ ...p, [t.table.id]: v }))}
-                affichage={options.affichage}
-              />
-            ))}
-            {etat === "pause" && (
-              <div className="sim-voile">
-                <strong>Pause</strong>
-                <button type="button" className="bouton principal" onClick={reprendre}>
-                  Reprendre
-                </button>
+          {options.disposition === "une" ? (
+            <div className={`sim-poste${etat === "pause" ? " en-pause" : ""}`}>
+              <aside className="sim-vignettes">
+                {sim.tables.map((t, i) => {
+                  const aToi = heroAgit(t);
+                  const restant = aToi ? sim.tempsRestant(t, maintenant) : null;
+                  return (
+                    <button
+                      key={`${t.table.id}-${t.table.debut}`}
+                      type="button"
+                      className={`sim-vignette${t.table.id === focus ? " affichee" : ""}${aToi ? " a-toi" : ""}${aToi && restant <= 3 ? " urgence" : ""}`}
+                      onClick={() => setFocus(t.table.id)}
+                      title={`Afficher la table ${i + 1} (touche ${i + 1})`}
+                    >
+                      <TableSim t={t} sim={sim} maintenant={maintenant} agir={() => {}} focalisee={false} preaction={null} setPreaction={() => {}} affichage={options.affichage} miniature />
+                      <span className="sim-vignette-num">{i + 1}</span>
+                      {aToi && <span className="sim-vignette-alerte">À toi · {Math.ceil(restant)} s</span>}
+                      {t.finie && <span className="sim-vignette-etat">Terminée</span>}
+                    </button>
+                  );
+                })}
+              </aside>
+              <div className="sim-grande">
+                {sim.tables
+                  .filter((t) => t.table.id === (focus || sim.tables[0].table.id))
+                  .map((t) => (
+                    <TableSim
+                      key={`${t.table.id}-${t.table.debut}`}
+                      t={t}
+                      sim={sim}
+                      maintenant={maintenant}
+                      agir={agir}
+                      focalisee
+                      surFocus={setFocus}
+                      preaction={preactions[t.table.id] || null}
+                      setPreaction={(v) => setPreactions((p) => ({ ...p, [t.table.id]: v }))}
+                      affichage={options.affichage}
+                      hauteurMax={Math.max(360, hauteurDispo)}
+                    />
+                  ))}
               </div>
-            )}
-          </div>
+              {etat === "pause" && (
+                <div className="sim-voile">
+                  <strong>Pause</strong>
+                  <button type="button" className="bouton principal" onClick={reprendre}>
+                    Reprendre
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className={`sim-tables n${sim.tables.length}${etat === "pause" ? " en-pause" : ""}`}>
+              {sim.tables.map((t) => (
+                <TableSim
+                  key={`${t.table.id}-${t.table.debut}`}
+                  t={t}
+                  sim={sim}
+                  maintenant={maintenant}
+                  agir={agir}
+                  focalisee={focalisee ? focalisee.table.id === t.table.id : false}
+                  surFocus={setFocus}
+                  preaction={preactions[t.table.id] || null}
+                  setPreaction={(v) => setPreactions((p) => ({ ...p, [t.table.id]: v }))}
+                  affichage={options.affichage}
+                />
+              ))}
+              {etat === "pause" && (
+                <div className="sim-voile">
+                  <strong>Pause</strong>
+                  <button type="button" className="bouton principal" onClick={reprendre}>
+                    Reprendre
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <Bento>
             <Tuile

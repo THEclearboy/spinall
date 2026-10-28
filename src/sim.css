@@ -58,7 +58,7 @@
   margin: 0;
   color: var(--texte-muet);
   font-size: 0.8rem;
-  max-width: 560px;
+  max-width: 620px;
 }
 .sim-aide kbd {
   display: inline-block;
@@ -121,28 +121,140 @@
 }
 .sim-commandes {
   display: flex;
+  align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+.sim-bascule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--texte-muet);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sim-bascule input {
+  accent-color: var(--lime);
 }
 
-/* --- grille des tables --- */
+/* --- pleine largeur : les tables débordent du gabarit central, comme des fenêtres Betclic --- */
+.sim-poste,
 .sim-tables {
   --pleine: min(100vw - 40px, 1900px);
   position: relative;
+  width: var(--pleine);
+  margin-left: calc(50% - var(--pleine) / 2);
+  margin-bottom: 14px;
+}
+
+/* --- une table en grand + vignettes --- */
+.sim-poste {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.sim-vignettes {
+  flex: none;
+  width: 196px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sim-vignette {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  opacity: 0.78;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.sim-vignette:hover {
+  opacity: 1;
+}
+.sim-vignette.affichee {
+  opacity: 1;
+}
+.sim-vignette.affichee .sim-cadre {
+  box-shadow: 0 0 0 3px #fff;
+}
+.sim-vignette.a-toi {
+  opacity: 1;
+}
+.sim-vignette .sim-cadre {
+  pointer-events: none;
+  border-radius: 10px;
+}
+.sim-vignette-num {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+.sim-vignette.affichee .sim-vignette-num {
+  background: #fff;
+  color: #111;
+}
+.sim-vignette-alerte,
+.sim-vignette-etat {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--lime);
+  color: #111;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  z-index: 5;
+}
+.sim-vignette.urgence .sim-vignette-alerte {
+  background: var(--bc-rouge-2);
+  color: #fff;
+}
+.sim-vignette-etat {
+  background: var(--bc-or);
+}
+.sim-grande {
+  flex: 1;
+  min-width: 0;
+}
+.sim-poste.en-pause .sim-cadre {
+  filter: blur(2px) saturate(0.6);
+}
+
+/* --- mosaïque --- */
+.sim-tables {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 14px;
-  /* les tables débordent du gabarit central pour occuper tout l'écran, comme des fenêtres Betclic côte à côte */
-  width: var(--pleine);
-  margin-left: calc(50% - var(--pleine) / 2);
   justify-items: center;
-}
-.sim-tables > .sim-cadre {
-  width: 100%;
-  max-width: 640px;
 }
 .sim-tables.n3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.sim-tables > .sim-emplacement {
+  max-width: 640px;
 }
 .sim-tables.en-pause .sim-cadre {
   filter: blur(2px) saturate(0.6);
@@ -165,8 +277,14 @@
 }
 
 /* --- fenêtre de table (dessinée en 640 × 430, puis mise à l'échelle) --- */
+.sim-emplacement {
+  width: 100%;
+  min-width: 0;
+}
 .sim-cadre {
   position: relative;
+  margin: 0 auto;
+  max-width: 100%;
   overflow: hidden;
   border-radius: 18px;
   background: var(--bc-fond);
@@ -176,9 +294,6 @@
 }
 .sim-cadre.a-toi {
   box-shadow: 0 0 0 3px var(--lime), 0 0 26px rgba(217, 255, 90, 0.35);
-}
-.sim-cadre.focalisee.a-toi {
-  box-shadow: 0 0 0 4px var(--lime), 0 0 32px rgba(217, 255, 90, 0.55);
 }
 .sim-cadre.urgence {
   animation: sim-urgence 0.5s steps(2, end) infinite;
@@ -298,16 +413,31 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  font-size: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 26px;
   font-weight: 900;
   letter-spacing: -0.03em;
-  color: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.08);
   white-space: nowrap;
+}
+.sim-filigrane-logo {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(226, 0, 26, 0.22);
+  color: rgba(255, 255, 255, 0.35);
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  line-height: 1;
 }
 .sim-centre {
   position: absolute;
   left: 50%;
-  top: 112px;
+  top: 110px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -323,6 +453,7 @@
   font-weight: 700;
   color: #dfe6f5;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 .sim-pot strong {
   font-size: 13px;
@@ -366,16 +497,16 @@
   line-height: 1.1;
 }
 .sim-carte.grande {
-  width: 54px;
-  height: 76px;
+  width: 60px;
+  height: 84px;
   border-radius: 7px;
 }
 .sim-carte.grande .rang {
-  font-size: 28px;
+  font-size: 30px;
   left: 5px;
 }
 .sim-carte.grande .symbole {
-  font-size: 30px;
+  font-size: 32px;
   right: 4px;
 }
 .sim-carte.petite {
@@ -414,14 +545,14 @@
 .sim-pod {
   position: absolute;
   transform: translate(-50%, -50%);
-}
-.sim-pod.pos-hero {
-  transform: translate(-50%, -100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   z-index: 3;
   transition: opacity 0.2s;
+}
+.sim-pod.pos-hero {
+  transform: translate(-50%, -100%);
 }
 .sim-pod.couche {
   opacity: 0.5;
@@ -439,15 +570,15 @@
 .sim-main-hero {
   display: flex;
   gap: 6px;
-  margin-bottom: -14px;
+  margin-bottom: -16px;
   position: relative;
   z-index: 1;
 }
 .sim-main-hero .sim-carte:first-child {
-  transform: rotate(-5deg);
+  transform: rotate(-6deg);
 }
 .sim-main-hero .sim-carte:last-child {
-  transform: rotate(5deg);
+  transform: rotate(6deg);
 }
 .sim-main-hero.couchee {
   opacity: 0.45;
@@ -461,25 +592,48 @@
   background: linear-gradient(180deg, #202c46, #151e33);
   border: 2px solid #34436a;
   border-radius: 999px;
-  padding: 4px 14px 4px 5px;
-  min-width: 142px;
+  padding: 3px 14px 3px 3px;
+  min-width: 146px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
 }
 .sim-pod.parle .sim-etiquette {
   border-color: var(--bc-rouge-2);
-  box-shadow: 0 0 0 2px rgba(255, 42, 63, 0.35), 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 42, 63, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 .sim-pod.hero.parle .sim-etiquette {
-  border-color: transparent;
-  background: linear-gradient(#202c46, #151e33) padding-box, conic-gradient(var(--lime) var(--p, 100%), #34436a 0) border-box;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 2px rgba(217, 255, 90, 0.3), 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 .sim-pod.gagnant .sim-etiquette {
   border-color: var(--bc-or);
 }
-.sim-avatar {
+/* anneau de temps autour de l'avatar (héros) ; pulsation pour un adversaire qui réfléchit */
+.sim-avatar-cadre {
   flex: none;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 3px;
+  background: #34436a;
+}
+.sim-pod.hero.parle .sim-avatar-cadre {
+  background: conic-gradient(var(--lime) var(--p, 100%), #34436a 0);
+}
+.sim-cadre.urgence .sim-pod.hero.parle .sim-avatar-cadre {
+  background: conic-gradient(var(--bc-rouge-2) var(--p, 100%), #34436a 0);
+}
+.sim-pod:not(.hero).parle .sim-avatar-cadre {
+  background: var(--bc-rouge-2);
+  animation: sim-pulse 1s ease-in-out infinite;
+}
+@keyframes sim-pulse {
+  50% {
+    background: #34436a;
+  }
+}
+.sim-avatar {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, #6b7fb3, #33436f);
   color: #fff;
@@ -587,6 +741,7 @@
   padding: 2px 9px 2px 5px;
   font-size: 11.5px;
   font-weight: 800;
+  white-space: nowrap;
   z-index: 2;
 }
 .sim-jeton {
@@ -615,7 +770,7 @@
 .sim-resultat {
   position: absolute;
   left: 50%;
-  top: 192px;
+  top: 190px;
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
@@ -760,8 +915,28 @@
   border-color: var(--bc-rouge);
   color: #fff;
 }
-.sim-relance input[type="range"] {
-  width: 100%;
+.sim-curseur {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sim-curseur button {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #34436a;
+  background: #22304d;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+.sim-curseur input[type="range"] {
+  flex: 1;
+  min-width: 0;
   accent-color: var(--bc-rouge);
   margin: 0;
 }
@@ -772,8 +947,8 @@
 }
 .sim-bouton {
   position: relative;
-  min-width: 104px;
-  height: 48px;
+  min-width: 108px;
+  height: 50px;
   border: none;
   border-radius: 10px;
   color: #fff;
@@ -894,8 +1069,29 @@
   .sim-tables.n4 {
     grid-template-columns: minmax(0, 1fr);
   }
+  .sim-poste,
   .sim-tables {
     --pleine: calc(100vw - 24px);
+  }
+  .sim-poste {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .sim-grande {
+    width: 100%;
+  }
+  .sim-vignettes {
+    width: 100%;
+    flex-direction: row;
+  }
+  .sim-vignette {
+    flex: 1;
+    min-width: 0;
+  }
+  .sim-vignette-alerte,
+  .sim-vignette-etat {
+    font-size: 9px;
+    padding: 2px 6px;
   }
   .sim-compteurs.ligne {
     gap: 6px 14px;
@@ -905,7 +1101,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .sim-cadre.urgence {
+  .sim-cadre.urgence,
+  .sim-pod:not(.hero).parle .sim-avatar-cadre {
     animation: none;
   }
 }
