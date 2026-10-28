@@ -1099,6 +1099,13 @@
   .sim-compteur strong {
     font-size: 1.05rem;
   }
+  /* sur mobile, le filtre du coach passe sous le titre au lieu de l'écraser */
+  .sim-coach .tuile-entete {
+    flex-wrap: wrap;
+  }
+  .sim-coach .tuile-titres {
+    flex-basis: 100%;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .sim-cadre.urgence,

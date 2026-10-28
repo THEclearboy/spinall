@@ -448,6 +448,7 @@ export function Simulateur({ charts, reglages, actif = true }) {
             <Tuile
               variante="sombre"
               span={12}
+              classe="sim-coach"
               titre="Coach"
               sous="chaque décision pré-flop couverte par tes ranges est jugée ; au flop, relanceur pré-flop qui checke = c-bet manqué"
               action={
