@@ -2807,7 +2807,87 @@ body.hud-fenetre .hud {
   margin-left: 4px;
 }
 
-/* ------------------------------------------------- mode entraînement */
+/* ------------------------------------------------- nombre de tables (question après import, comparaison) */
+.lignes-tables {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+}
+.ligne-tables {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.ligne-tables.entete {
+  background: none;
+  border-bottom: 1px solid var(--separateur);
+  border-radius: 0;
+}
+.ligne-tables-libelle {
+  font-size: 0.86rem;
+  color: var(--texte-muet);
+}
+.ligne-tables-libelle strong {
+  color: var(--texte);
+}
+.segment.compact button {
+  padding: 5px 10px;
+  min-width: 34px;
+}
+.par-tables tr.cliquable {
+  cursor: pointer;
+}
+.par-tables tr.cliquable:hover td {
+  background: rgba(255, 255, 255, 0.04);
+}
+.par-tables tr.active td {
+  background: rgba(217, 255, 90, 0.1);
+}
+.par-tables tr.total td {
+  border-top: 1px solid var(--separateur);
+  font-weight: 800;
+}
+.par-tables td.positif {
+  color: var(--lime);
+}
+.par-tables td.negatif {
+  color: var(--orange);
+}
+.barre-cev {
+  display: inline-block;
+  width: 56px;
+  height: 8px;
+  margin-right: 8px;
+  vertical-align: middle;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.barre-cev span {
+  display: block;
+  height: 100%;
+  background: var(--lime);
+}
+.barre-cev.negatif span {
+  background: var(--orange);
+  margin-left: auto;
+}
+.detail-tables {
+  margin-top: 12px;
+}
+.saisie-tables {
+  margin-top: 10px;
+}
+.saisie-tables .lignes-tables {
+  max-height: 420px;
+  overflow-y: auto;
+}
 .apres-import {
   margin-top: 12px;
   padding: 12px 14px;

@@ -290,40 +290,53 @@ test("surveillance du dossier : fichiers existants ignorés, nouvelles parties c
   assert.deepEqual(r.nouvelles, []);
 });
 
-test("entraînement : marquage, filtre, tables simultanées, comparaison", async () => {
-  const e = await import("../src/lib/mode-entrainement.js");
+test("nombre de tables : lignes jour × limite, question, définition, comparaison", async () => {
+  const e = await import("../src/lib/nombre-tables.js");
   const charts = construireCharts(donnees);
   const { mains } = parseFichier(historique);
   const parties = e.partiesDe(mains);
   assert.equal(parties.length, 6);
-  assert.ok(parties.every((p) => !p.entrainement));
-  // marquage de deux parties à 0,20 € par période (les deux premières)
-  const deux = new Set(parties.filter((p) => p.limite === parties[0].limite).slice(0, 2).map((p) => p.id));
-  assert.equal(deux.size, 2, "la limite de la première partie en a au moins deux");
-  const marquees = e.marquerParties(mains, deux, true);
-  assert.equal(e.partiesDe(marquees).filter((p) => p.entrainement).length, 2);
-  assert.equal(e.filtrerMode(marquees, "entrainement").length + e.filtrerMode(marquees, "normal").length, mains.length);
-  assert.equal(e.filtrerMode(marquees, "tout").length, mains.length);
-  // mains non concernées : mêmes objets (pas de copie inutile)
-  assert.ok(marquees.some((m, i) => m === mains[i]));
-  // nombre de tables déclaré
-  const quatre = e.marquerParties(mains, deux, true, 4);
+  assert.ok(parties.every((p) => p.tables === null && p.jour));
+  // lignes par jour et limite : autant de parties au total, triées
+  const lignes = e.lignesParJourEtLimite(parties);
+  assert.equal(lignes.reduce((s, l) => s + l.parties, 0), 6);
+  assert.ok(lignes.every((l) => l.ids.length === l.parties && l.tables === null));
+  // la question est posée jusqu'à 3 jours, pas au-delà
+  assert.equal(e.doitDemanderTables(parties), e.nombreDeJours(parties) <= 3);
+  const quatreJours = [1, 2, 3, 4].map((j) => ({ id: "p" + j, jour: `2026-10-0${j}`, limite: 0.2, date: Date.parse(`2026-10-0${j}T20:00:00Z`), tables: null }));
+  assert.equal(e.doitDemanderTables(quatreJours), false);
+  assert.equal(e.doitDemanderTables(quatreJours.slice(0, 3)), true);
+  assert.equal(e.doitDemanderTables([]), false);
+  // définir 4 tables sur la première ligne
+  const quatre = e.definirTables(mains, lignes[0].ids, 4);
   assert.deepEqual(e.tablesDeclarees(quatre), [4]);
-  assert.ok(quatre.filter((m) => deux.has(m.partieId)).every((m) => m.tables === 4));
-  const cmp4 = e.comparerEntrainement(quatre, charts, null, parties[0].limite, 4);
-  assert.equal(cmp4.entrainement.parties, 2);
-  assert.equal(cmp4.entrainement.tablesDeclarees, 4);
-  assert.equal(e.comparerEntrainement(quatre, charts, null, parties[0].limite, 2).entrainement.parties, 0);
-  assert.deepEqual(cmp4.tablesDeclarees, [4]);
-  // démarquage
-  const demarquees = e.marquerParties(marquees, deux, false);
-  assert.equal(e.partiesDe(demarquees).filter((p) => p.entrainement).length, 0);
-  assert.ok(!("entrainement" in demarquees.find((m) => deux.has(m.partieId))));
-  assert.ok(!("tables" in e.marquerParties(quatre, deux, false).find((m) => deux.has(m.partieId))));
-  // sélection par limite et période
-  const ids = e.idsParLimiteEtPeriode(mains, parties[0].limite, parties[0].date, parties[0].date);
-  assert.ok(ids.has(parties[0].id));
-  assert.deepEqual([...e.partiesParLimite(parties)].map((l) => l.parties).reduce((a, b) => a + b, 0), 6);
+  assert.ok(quatre.filter((m) => lignes[0].ids.includes(m.partieId)).every((m) => m.tables === 4));
+  assert.ok(quatre.some((m, i) => m === mains[i]), "les mains non concernées ne sont pas copiées");
+  assert.equal(e.lignesParJourEtLimite(e.partiesDe(quatre))[0].tables, 4);
+  // retirer la valeur
+  const sans = e.definirTables(quatre, lignes[0].ids, null);
+  assert.deepEqual(e.tablesDeclarees(sans), []);
+  assert.ok(!("tables" in sans.find((m) => lignes[0].ids.includes(m.partieId))));
+  // l'ancien marquage « entraînement » disparaît quand on définit les tables
+  const ancien = mains.map((m) => (lignes[0].ids.includes(m.partieId) ? { ...m, entrainement: true } : m));
+  assert.ok(!("entrainement" in e.definirTables(ancien, lignes[0].ids, 2).find((m) => lignes[0].ids.includes(m.partieId))));
+  // comparaison par nombre de tables sur la limite de la ligne
+  const cmp = e.comparerParTables(quatre, charts, null, lignes[0].limite);
+  assert.equal(cmp.lignes.length, 1);
+  assert.equal(cmp.lignes[0].tables, 4);
+  assert.equal(cmp.lignes[0].parties, lignes[0].parties);
+  assert.equal(cmp.lignes[0].cEV, null, "sans calcul d'EV, cEV inconnu");
+  assert.deepEqual(cmp.limitesAvecTables, [lignes[0].limite]);
+  assert.ok(cmp.total.parties >= cmp.lignes[0].parties);
+  if (cmp.sansTables) assert.equal(cmp.sansTables.parties + cmp.lignes[0].parties, cmp.total.parties);
+  assert.equal(e.comparerParTables(mains, charts, null, null).lignes.length, 0);
+  // détail par jour et saisie après coup
+  const detail = e.detailParJour(quatre, null, lignes[0].limite, 4);
+  assert.equal(detail.length, 1);
+  assert.equal(detail[0].parties, lignes[0].parties);
+  assert.equal(e.lignesASaisir(quatre, true).length, lignes.length - 1);
+  assert.equal(e.lignesASaisir(quatre, false).length, lignes.length);
+  assert.equal(e.limiteParDefaut(quatre), lignes[0].limite);
   // tables simultanées : deux parties qui se chevauchent entièrement → moyenne 2, max 2
   const t0 = Date.parse("2026-10-20T20:00:00Z");
   const synth = [
@@ -337,19 +350,9 @@ test("entraînement : marquage, filtre, tables simultanées, comparaison", async
   const tables = e.tablesSimultanees(synth);
   assert.equal(tables.max, 2);
   assert.equal(tables.parties, 3);
-  // A et B : 6 min chacune en parallèle (6 min couvertes), C : 7 min seule → (6+6+7)/13
   assert.ok(Math.abs(tables.moyenne - 19 / 13) < 1e-9);
   assert.equal(e.tablesSimultanees([]).max, 0);
-  // heures de jeu : une session de 26 min + 1 min
   assert.ok(Math.abs(e.heuresDeJeu(synth) - 27 / 60) < 1e-9);
-  // comparaison sur la limite des parties marquées
-  const cmp = e.comparerEntrainement(marquees, charts, null, parties[0].limite);
-  assert.equal(cmp.entrainement.parties, 2);
-  assert.ok(cmp.normal.parties + cmp.entrainement.parties <= 6);
-  assert.equal(cmp.entrainement.cEV, null, "sans calcul d'EV, cEV inconnu");
-  assert.deepEqual(cmp.limitesEntrainement, [parties[0].limite]);
-  assert.equal(e.limiteComparaisonParDefaut(marquees), parties[0].limite);
-  assert.equal(e.limiteComparaisonParDefaut(mains), null);
 });
 
 test("cEV dans le temps : regroupement par partie, jour, semaine et pires périodes", async () => {

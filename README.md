@@ -67,28 +67,21 @@ Tuile « cEV dans le temps » (`src/components/graphes/BarresEv.jsx`,
 infobulle, et les cinq plus grosses pertes en pastilles. Sert à repérer quand
 le cEV a plongé.
 
-## Mode entraînement
+## Nombre de tables
 
-Pour s'entraîner à jouer plus de tables sans fausser ses stats (souvent à 0,20 €) :
+Pour savoir comment on joue selon le nombre de tables ouvertes en même temps :
 
-- Après un import, la barre d'import propose de marquer les nouvelles parties
-  d'une limite comme **entraînement** (0,20 € mis en avant), puis demande le
-  nombre de tables jouées en même temps. Le marquage est posé sur les mains
-  (`main.entrainement = true`, `main.tables = n`, persisté avec la base) ;
-  `src/lib/mode-entrainement.js` porte la logique (`marquerParties`,
-  `idsParLimiteEtPeriode`, `filtrerMode`, `tablesSimultanees`, `comparerEntrainement`).
-- Dès qu'il existe des parties d'entraînement, un segment **Tout · Normal ·
-  Entraînement** apparaît à côté des limites. Par défaut tout compte (gains,
-  stats, heures jouées, bilan en image) ; Normal et Entraînement isolent l'un
-  ou l'autre.
-- Tuile **Entraînement vs normal** : sur la limite choisie, parties, respect des
-  ranges pré-flop, cEV et réel par partie, ROI, gain net, victoires, parties par
-  heure, tables en même temps (moyenne et pic, d'après le chevauchement des
-  parties), heures, VPIP, PFR, avec l'écart entraînement moins normal. Un
-  formulaire replié permet de marquer ou démarquer des parties par limite et
-  période. Quand des nombres de tables sont déclarés, un segment permet de
-  comparer le normal à l'entraînement à 2, 4… tables, et une ligne affiche la
-  moyenne déclarée face aux tables mesurées.
+- Après un import qui tient en **3 jours au plus**, la barre d'import demande, **par jour et par limite**,
+  combien de tables étaient jouées en même temps (pilules 1 à 8, « ? » pour je ne sais plus, une ligne « Toutes
+  les lignes » pour répondre d'un coup). Au-delà de 3 jours la question n'est pas posée. La valeur est posée sur les
+  mains (`main.tables = n`, persisté avec la base) ; `src/lib/nombre-tables.js` porte la logique
+  (`lignesParJourEtLimite`, `doitDemanderTables`, `definirTables`, `comparerParTables`, `detailParJour`,
+  `tablesSimultanees`).
+- Tuile **cEV par nombre de tables** : sur la limite choisie, une ligne par nombre de tables déclaré (plus
+  « Non renseigné » et « Toutes ») avec parties, cEV et réel par partie (jetons), ROI, gain net, respect des ranges,
+  victoires, parties par heure, tables mesurées d'après le chevauchement des parties, heures, VPIP, PFR. Une ligne
+  cliquée détaille les jours. Un volet replié permet de renseigner ou corriger le nombre de tables de n'importe quel
+  jour passé (imports de plus de 3 jours compris).
 
 ## HUD de session
 

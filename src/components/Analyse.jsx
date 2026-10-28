@@ -20,17 +20,8 @@ import { parseFichier, empreinteFichier, resultatJoueur } from "../lib/historiqu
 import { lireZip, sansBom } from "../lib/zip.js";
 import { bilanParLimite, limitesPresentes } from "../lib/limites.js";
 import { heuresParJour, totalHeuresMois, formatHeures, cleJour } from "../lib/heures.js";
-import {
-  LIMITE_ENTRAINEMENT_DEFAUT,
-  partiesDe,
-  partiesParLimite,
-  marquerParties,
-  idsParLimiteEtPeriode,
-  filtrerMode,
-  comparerEntrainement,
-  limiteComparaisonParDefaut,
-} from "../lib/mode-entrainement.js";
-import { Comparaison } from "./Comparaison.jsx";
+import { partiesDe, lignesParJourEtLimite, nombreDeJours, doitDemanderTables, definirTables, limiteParDefaut, formatJour, MAX_JOURS_QUESTION } from "../lib/nombre-tables.js";
+import { ComparaisonTables, ChoixNombreTables } from "./ComparaisonTables.jsx";
 import { BarresEv } from "./graphes/BarresEv.jsx";
 import { evParPeriode, piresPeriodes, granulariteConseillee } from "../lib/ev-temps.js";
 import { lireLocal, ecrireLocal } from "../lib/stockage.js";
@@ -68,21 +59,15 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
 
   const limites = useMemo(() => limitesPresentes(analyse.mains), [analyse.mains]);
   const limiteActive = limite !== null && limites.includes(limite) ? limite : null;
-  // Mode : par défaut tout compte (gains, stats, heures) ; le segment isole le normal ou l'entraînement.
-  const [mode, setMode] = useState("tout");
+  // Après un import : question « combien de tables ? » par jour et par limite (si l'import tient en 3 jours).
   const [dernierImport, setDernierImport] = useState(null);
   const [limiteComparaison, setLimiteComparaison] = useState(null);
   const [granulariteEv, setGranulariteEv] = useState(null);
-  const aDesEntrainements = useMemo(() => analyse.mains.some((m) => m.entrainement), [analyse.mains]);
-  const modeActif = aDesEntrainements ? mode : "tout";
   const mainsScope = useMemo(
-    () => filtrerMode(limiteActive === null ? analyse.mains : analyse.mains.filter((m) => m.buyIn === limiteActive), modeActif),
-    [analyse.mains, limiteActive, modeActif],
+    () => (limiteActive === null ? analyse.mains : analyse.mains.filter((m) => m.buyIn === limiteActive)),
+    [analyse.mains, limiteActive],
   );
-  const marquer = useCallback(
-    (ids, valeur, tables = null) => setAnalyse((a) => ({ ...a, mains: marquerParties(a.mains, ids, valeur, tables) })),
-    [setAnalyse],
-  );
+  const definir = useCallback((ids, tables) => setAnalyse((a) => ({ ...a, mains: definirTables(a.mains, ids, tables) })), [setAnalyse]);
   const stats = useMemo(() => calculerStats(mainsScope, charts), [mainsScope, charts]);
   const spotParMain = useMemo(() => {
     const m = new Map();
@@ -199,7 +184,12 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
       if (ignores > 0) messages.push(`${pluriel("fichier ignoré", ignores)} (seuls les .txt et .zip sont lus)`);
       if (nouvellesMains.length > 0) {
         const nouvellesParties = partiesDe(nouvellesMains);
-        setDernierImport({ parties: nouvellesParties, parLimite: partiesParLimite(nouvellesParties), choix: null, decision: null });
+        setDernierImport({
+          nbParties: nouvellesParties.length,
+          nbJours: nombreDeJours(nouvellesParties),
+          demander: doitDemanderTables(nouvellesParties),
+          lignes: lignesParJourEtLimite(nouvellesParties).map((l) => ({ ...l, reponse: undefined })),
+        });
       }
       if (nouvellesMains.length > 0 || nouveauxFichiers.length > 0)
         setAnalyse((a) => {
@@ -289,9 +279,7 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
   );
   const nbPartiesPeriode = partiesRecentes.reduce((s, j) => s + j.nb, 0);
   const roi = stats.investi > 0 ? stats.netEuro / stats.investi : null;
-  const libelleScope =
-    (limiteActive === null ? "toutes limites" : `limite ${euros(limiteActive)}`) +
-    (modeActif === "normal" ? " · hors entraînement" : modeActif === "entrainement" ? " · entraînement" : "");
+  const libelleScope = limiteActive === null ? "toutes limites" : `limite ${euros(limiteActive)}`;
 
   const nbFichiers = (analyse.fichiers || []).length;
   const dernierJour = mainsScope.reduce((max, m) => (m.date && m.date > max ? m.date : max), 0);
@@ -343,19 +331,6 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
               ))}
             </div>
           )}
-          {aDesEntrainements && (
-            <div className="segment" title="Tout : gains, stats et heures avec l'entraînement. Normal ou Entraînement : seulement ces parties-là.">
-              {[
-                ["tout", "Tout"],
-                ["normal", "Normal"],
-                ["entrainement", "Entraînement"],
-              ].map(([id, nom]) => (
-                <button key={id} className={mode === id ? "actif" : ""} onClick={() => setMode(id)}>
-                  {nom}
-                </button>
-              ))}
-            </div>
-          )}
           {analyse.mains.length > 0 && (
             <>
               <Pilule variante="blanc" onClick={() => setPartageOuvert(true)} titre="Générer une image du bilan à envoyer">
@@ -385,118 +360,60 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           e.target.value = "";
         }}
       />
-      {dernierImport && dernierImport.parties.length > 0 && (
+      {dernierImport && dernierImport.nbParties > 0 && (
         <div className="apres-import">
-          {dernierImport.decision === null && dernierImport.choix === null && (
-            <>
-              <p className="muet">
-                <strong>{pluriel("nouvelle partie", dernierImport.parties.length)}</strong> (
-                {dernierImport.parLimite.map((l) => `${l.limite === null ? "limite inconnue" : euros(l.limite)} : ${l.parties}`).join(" · ")}
-                ). De l'entraînement dedans ? Les parties marquées comptent dans tes gains et tes stats, et la tuile « Entraînement vs
-                normal » les compare au reste.
-              </p>
-              <div className="pilules">
-                {dernierImport.parLimite.map((l) => (
-                  <Pilule
-                    key={String(l.limite)}
-                    variante={l.limite === LIMITE_ENTRAINEMENT_DEFAUT ? "lime" : "clair"}
-                    classe={l.limite === LIMITE_ENTRAINEMENT_DEFAUT ? "" : "sur-sombre"}
-                    onClick={() =>
-                      setDernierImport({
-                        ...dernierImport,
-                        choix: { limite: l.limite, ids: dernierImport.parties.filter((p) => p.limite === l.limite).map((p) => p.id) },
-                      })
-                    }
-                  >
-                    Entraînement à {l.limite === null ? "limite inconnue" : euros(l.limite)} ({l.parties})
-                  </Pilule>
-                ))}
-                {dernierImport.parLimite.length > 1 && (
-                  <Pilule
-                    variante="clair"
-                    classe="sur-sombre"
-                    onClick={() => setDernierImport({ ...dernierImport, choix: { limite: null, ids: dernierImport.parties.map((p) => p.id) } })}
-                  >
-                    Tout l'import en entraînement
-                  </Pilule>
-                )}
-                <Pilule variante="clair" classe="sur-sombre" onClick={() => setDernierImport(null)}>
-                  Non, tout est normal
-                </Pilule>
-              </div>
-            </>
-          )}
-          {dernierImport.decision === null && dernierImport.choix !== null && (
-            <>
-              <p className="muet">
-                <strong>{pluriel("partie", dernierImport.choix.ids.length)}</strong>
-                {dernierImport.choix.limite === null ? "" : ` à ${euros(dernierImport.choix.limite)}`} en entraînement. Combien de tables
-                jouais-tu en même temps ?
-              </p>
-              <div className="pilules">
-                {[1, 2, 3, 4, 5, 6, 8].map((n) => (
-                  <Pilule
-                    key={n}
-                    variante={n === 4 ? "lime" : "clair"}
-                    classe={n === 4 ? "" : "sur-sombre"}
-                    onClick={() => {
-                      marquer(dernierImport.choix.ids, true, n);
-                      setDernierImport({ ...dernierImport, decision: { ...dernierImport.choix, tables: n } });
-                    }}
-                  >
-                    {n === 1 ? "1 table" : `${n} tables`}
-                  </Pilule>
-                ))}
-                <label className="champ-tables">
-                  autre{" "}
-                  <input
-                    type="number"
-                    min="1"
-                    max="30"
-                    placeholder="n"
-                    onKeyDown={(e) => {
-                      const n = Number(e.currentTarget.value);
-                      if (e.key === "Enter" && n >= 1) {
-                        marquer(dernierImport.choix.ids, true, n);
-                        setDernierImport({ ...dernierImport, decision: { ...dernierImport.choix, tables: n } });
-                      }
-                    }}
-                  />
-                </label>
-                <Pilule
-                  variante="clair"
-                  classe="sur-sombre"
-                  onClick={() => {
-                    marquer(dernierImport.choix.ids, true, null);
-                    setDernierImport({ ...dernierImport, decision: { ...dernierImport.choix, tables: null } });
-                  }}
-                >
-                  Je ne sais plus
-                </Pilule>
-              </div>
-            </>
-          )}
-          {dernierImport.decision !== null && (
+          {!dernierImport.demander ? (
             <p className="muet">
-              {pluriel("partie", dernierImport.decision.ids.length)}
-              {dernierImport.decision.limite === null ? "" : ` à ${euros(dernierImport.decision.limite)}`} marquée
-              {dernierImport.decision.ids.length > 1 ? "s" : ""} entraînement
-              {dernierImport.decision.tables ? `, ${dernierImport.decision.tables === 1 ? "1 table" : `${dernierImport.decision.tables} tables`} en même temps` : ""}.{" "}
-              <button
-                className="lien"
-                type="button"
-                onClick={() => {
-                  marquer(dernierImport.decision.ids, false);
-                  setDernierImport({ ...dernierImport, choix: null, decision: null });
-                }}
-              >
-                Annuler
-              </button>
-              {" · "}
+              <strong>{pluriel("nouvelle partie", dernierImport.nbParties)}</strong> sur {pluriel("jour", dernierImport.nbJours)} : le nombre de tables n'est pas demandé au-delà de{" "}
+              {MAX_JOURS_QUESTION} jours. Tu peux le renseigner jour par jour dans la tuile « cEV par nombre de tables ».{" "}
               <button className="lien" type="button" onClick={() => setDernierImport(null)}>
                 OK
               </button>
             </p>
+          ) : (
+            <>
+              <p className="muet">
+                <strong>{pluriel("nouvelle partie", dernierImport.nbParties)}</strong>. Combien de tables jouais-tu en même temps ? Une réponse par jour et par limite ; ça alimente
+                la tuile « cEV par nombre de tables ».
+              </p>
+              <div className="lignes-tables">
+                {dernierImport.lignes.length > 1 && (
+                  <div className="ligne-tables entete">
+                    <span className="ligne-tables-libelle">Toutes les lignes</span>
+                    <ChoixNombreTables
+                      valeur={undefined}
+                      surChoix={(n) => {
+                        definir(dernierImport.lignes.flatMap((l) => l.ids), n);
+                        setDernierImport({ ...dernierImport, lignes: dernierImport.lignes.map((l) => ({ ...l, reponse: n === null ? "?" : n })) });
+                      }}
+                      compact
+                    />
+                  </div>
+                )}
+                {dernierImport.lignes.map((l) => (
+                  <div className="ligne-tables" key={l.cle}>
+                    <span className="ligne-tables-libelle">
+                      <strong>{formatJour(l.date)}</strong> · {l.limite === null ? "limite inconnue" : euros(l.limite)} · {pluriel("partie", l.parties)}
+                    </span>
+                    <ChoixNombreTables
+                      valeur={l.reponse}
+                      surChoix={(n) => {
+                        definir(l.ids, n);
+                        setDernierImport({ ...dernierImport, lignes: dernierImport.lignes.map((x) => (x.cle === l.cle ? { ...x, reponse: n === null ? "?" : n } : x)) });
+                      }}
+                      compact
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="muet">
+                {dernierImport.lignes.filter((l) => l.reponse !== undefined).length}/{dernierImport.lignes.length} renseigné
+                {dernierImport.lignes.length > 1 ? "es" : "e"} ·{" "}
+                <button className="lien" type="button" onClick={() => setDernierImport(null)}>
+                  {dernierImport.lignes.every((l) => l.reponse !== undefined) ? "OK" : "Plus tard"}
+                </button>
+              </p>
+            </>
           )}
         </div>
       )}
@@ -947,17 +864,16 @@ export function Analyse({ charts, analyse, setAnalyse, chargee, sauvegardeOk }) 
           />
         </Tuile>
 
-        {/* ---- Entraînement vs normal ---- */}
-        {aDesEntrainements && (
-          <Comparaison
+        {/* ---- cEV par nombre de tables ---- */}
+        {analyse.mains.length > 0 && (
+          <ComparaisonTables
             mains={analyse.mains}
             charts={charts}
             parMain={calculEvTotal.parMain}
-            limite={limiteComparaison !== null ? limiteComparaison : limiteComparaisonParDefaut(analyse.mains)}
+            limite={limiteComparaison !== null ? (limites.includes(limiteComparaison) ? limiteComparaison : null) : limiteParDefaut(analyse.mains)}
             setLimite={setLimiteComparaison}
             limites={limites}
-            marquer={marquer}
-            idsParLimiteEtPeriode={(l, d, f) => idsParLimiteEtPeriode(analyse.mains, l, d, f)}
+            definir={definir}
           />
         )}
 
